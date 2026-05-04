@@ -1,9 +1,5 @@
 {
-  "extends": "@pipecommerce/config/tsconfig/library.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
-  },
-  "include": ["src/**/*", "drizzle.config.ts"],
-  "exclude": ["node_modules", "dist", "migrations"]
+  "extends": "@pipecommerce/config/tsconfig/base.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "migrations"]
 }
