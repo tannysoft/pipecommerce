@@ -14,14 +14,14 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 # id = "TODO"
 
 # KV — shop-by-domain cache, draft tokens, redirect cache
-# [[kv_namespaces]]
-# binding = "SHOP_KV"
-# id = "TODO"
+[[kv_namespaces]]
+binding = "SHOP_KV"
+id = "edcf63b86b7e4a2088d779e1f2eb38cb"
 
 # R2 — images, CSV uploads
-# [[r2_buckets]]
-# binding = "R2"
-# bucket_name = "pipecommerce"
+[[r2_buckets]]
+binding = "pipecommerce"
+bucket_name = "pipecommerce"
 
 # Queues — background jobs
 # [[queues.producers]]
