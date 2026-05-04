@@ -1,0 +1,35 @@
+node_modules
+.pnpm-store
+
+# next
+.next
+.open-next
+
+# turbo
+.turbo
+
+# wrangler
+.wrangler
+.dev.vars
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build
+dist
+build
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea

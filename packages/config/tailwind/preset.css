@@ -1,0 +1,8 @@
+/* Shared Tailwind 4 preset — apps import this in their globals.css */
+@theme {
+  --color-brand-50: oklch(0.98 0.005 250);
+  --color-brand-500: oklch(0.62 0.22 260);
+  --color-brand-900: oklch(0.28 0.10 260);
+
+  --font-sans: 'Inter', 'Noto Sans Thai', system-ui, sans-serif;
+}

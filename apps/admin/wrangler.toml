@@ -1,0 +1,27 @@
+name = "pipecommerce-admin"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+# ─── Bindings (commented — uncomment when ready) ─────────────────────────────
+
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "TODO"
+
+# [[kv_namespaces]]
+# binding = "SHOP_KV"
+# id = "TODO"
+
+# [[r2_buckets]]
+# binding = "R2"
+# bucket_name = "pipecommerce"
+
+# [[queues.producers]]
+# binding = "EMAIL_QUEUE"
+# queue = "email"
+
+[vars]
+PLATFORM_DOMAIN = "pipecommerce.app"

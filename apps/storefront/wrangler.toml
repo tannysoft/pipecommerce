@@ -1,0 +1,41 @@
+name = "pipecommerce-storefront"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# OpenNext-built static assets
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+# ─── Bindings (commented out — uncomment + fill IDs when ready) ───────────────
+
+# Hyperdrive — connection pooling สำหรับ Supabase Postgres
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "TODO"
+
+# KV — shop-by-domain cache, draft tokens, redirect cache
+# [[kv_namespaces]]
+# binding = "SHOP_KV"
+# id = "TODO"
+
+# R2 — images, CSV uploads
+# [[r2_buckets]]
+# binding = "R2"
+# bucket_name = "pipecommerce"
+
+# Queues — background jobs
+# [[queues.producers]]
+# binding = "EMAIL_QUEUE"
+# queue = "email"
+
+# [[queues.producers]]
+# binding = "IMAGE_QUEUE"
+# queue = "image-process"
+
+# [[queues.producers]]
+# binding = "BEAM_QUEUE"
+# queue = "beam-webhook"
+
+# ─── Vars (non-secret config) ────────────────────────────────────────────────
+[vars]
+PLATFORM_DOMAIN = "pipecommerce.app"

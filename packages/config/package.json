@@ -1,0 +1,16 @@
+{
+  "name": "@pipecommerce/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/library.json": "./tsconfig/library.json",
+    "./tailwind/preset": "./tailwind/preset.css"
+  },
+  "files": [
+    "tsconfig",
+    "tailwind"
+  ]
+}
