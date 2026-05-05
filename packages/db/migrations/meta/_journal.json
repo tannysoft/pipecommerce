@@ -78,6 +78,13 @@
       "when": 1778002893712,
       "tag": "0010_themes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778003048497,
+      "tag": "0011_marketing_bulk_reports_seo",
+      "breakpoints": true
     }
   ]
 }

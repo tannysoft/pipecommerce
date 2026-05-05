@@ -62,3 +62,11 @@ export * from './themes.ts'
 export * from './shop-theme-settings.ts'
 export * from './shop-theme-assets.ts'
 export * from './theme-draft-tokens.ts'
+
+// Phase 2i — marketing + bulk + reports + SEO
+export * from './shop-announcement-bars.ts'
+export * from './newsletter-subscribers.ts'
+export * from './bulk-jobs.ts'
+export * from './report-snapshots-daily.ts'
+export * from './report-email-subscriptions.ts'
+export * from './seo-redirects.ts'
