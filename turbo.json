@@ -3,8 +3,8 @@
   "globalDependencies": [".env", "tsconfig.json"],
   "globalEnv": [
     "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "JWT_SECRET",
     "CF_ACCOUNT_ID",

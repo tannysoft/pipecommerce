@@ -1,0 +1,27 @@
+{
+  "name": "@pipecommerce/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./admin/server": "./src/admin/server.ts",
+    "./admin/browser": "./src/admin/browser.ts",
+    "./admin/middleware": "./src/admin/middleware.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.10"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0"
+  },
+  "devDependencies": {
+    "@pipecommerce/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "next": "^16.0.0",
+    "typescript": "^5.7.2"
+  }
+}

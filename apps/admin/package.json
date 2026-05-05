@@ -14,8 +14,11 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@pipecommerce/auth": "workspace:*",
     "@pipecommerce/db": "workspace:*",
     "@pipecommerce/ui": "workspace:*",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.10",
     "next": "^16.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
