@@ -24,3 +24,13 @@ export * from './collection-products.ts'
 export * from './locations.ts'
 export * from './inventory-items.ts'
 export * from './inventory-movements.ts'
+
+// Phase 2d — cart + orders + fulfillments + refunds
+//   discount junction tables come in Phase 2e (depend on discounts table)
+export * from './carts.ts'
+export * from './cart-items.ts'
+export * from './orders.ts'
+export * from './order-line-items.ts'
+export * from './fulfillments.ts'
+export * from './fulfillment-line-items.ts'
+export * from './refunds.ts'
