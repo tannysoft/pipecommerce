@@ -5,6 +5,11 @@ import { notFound, redirect } from 'next/navigation'
 import { cache } from 'react'
 import { db } from './db.ts'
 
+export type ShopSettings = {
+  fonts?: { heading?: string; body?: string }
+  [k: string]: unknown
+}
+
 export type AdminShop = {
   id: string
   slug: string
@@ -12,6 +17,7 @@ export type AdminShop = {
   status: string
   currency: string
   timezone: string
+  settings: ShopSettings
 }
 
 /**
@@ -38,6 +44,7 @@ export const requireShop = cache(async (slug: string) => {
       status: shops.status,
       currency: shops.currency,
       timezone: shops.timezone,
+      settings: shops.settings,
     })
     .from(shops)
     .innerJoin(
@@ -49,5 +56,8 @@ export const requireShop = cache(async (slug: string) => {
 
   if (!shop) notFound()
 
-  return { shop: shop as AdminShop, user }
+  return {
+    shop: { ...shop, settings: (shop.settings ?? {}) as ShopSettings } as AdminShop,
+    user,
+  }
 })

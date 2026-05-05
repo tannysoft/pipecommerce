@@ -5,3 +5,15 @@
 /* Tailwind 4 scope ของ default scan = app root เท่านั้น
    ต้องบอกให้ scan classes ใน workspace packages ที่ใช้ JSX class ด้วย */
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+/* Per-shop fonts — variables --font-body / --font-heading set ใน <html style>
+   ของ root layout ตาม shop.settings.fonts. Default = Inter / Noto Sans Thai */
+@theme inline {
+  --font-sans: var(--font-body, 'Inter'), 'Noto Sans Thai', system-ui, sans-serif;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading, 'Noto Sans Thai'), system-ui, sans-serif;
+  }
+}

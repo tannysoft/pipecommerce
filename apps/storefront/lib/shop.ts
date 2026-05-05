@@ -14,6 +14,12 @@ const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? 'pipecommerce.app').toLo
  */
 const SUBDOMAIN_SUFFIXES = [`.${PLATFORM_DOMAIN}`, '.localhost']
 
+export type ShopSettings = {
+  fonts?: { heading?: string; body?: string }
+  // อื่นๆ ที่จะเพิ่มภายหลัง — tax, seo, robots_txt, ฯลฯ
+  [k: string]: unknown
+}
+
 export type StorefrontShop = {
   id: string
   slug: string
@@ -21,7 +27,18 @@ export type StorefrontShop = {
   status: string
   currency: string
   timezone: string
+  settings: ShopSettings
 }
+
+const shopColumns = {
+  id: shops.id,
+  slug: shops.slug,
+  name: shops.name,
+  status: shops.status,
+  currency: shops.currency,
+  timezone: shops.timezone,
+  settings: shops.settings,
+} as const
 
 /**
  * lookup shop จาก hostname ของ request
@@ -41,20 +58,15 @@ export const lookupShopByHost = cache(
 
     // 1. custom domain
     const [byCustomDomain] = await db
-      .select({
-        id: shops.id,
-        slug: shops.slug,
-        name: shops.name,
-        status: shops.status,
-        currency: shops.currency,
-        timezone: shops.timezone,
-      })
+      .select(shopColumns)
       .from(shopDomains)
       .innerJoin(shops, eq(shopDomains.shopId, shops.id))
       .where(and(eq(shopDomains.hostname, host), eq(shopDomains.sslStatus, 'active')))
       .limit(1)
 
-    if (byCustomDomain) return byCustomDomain
+    if (byCustomDomain) {
+      return { ...byCustomDomain, settings: (byCustomDomain.settings ?? {}) as ShopSettings }
+    }
 
     // 2. {slug}.{suffix} subdomain
     for (const suffix of SUBDOMAIN_SUFFIXES) {
@@ -63,19 +75,14 @@ export const lookupShopByHost = cache(
       if (!slug || slug.includes('.')) continue
 
       const [byShopSlug] = await db
-        .select({
-          id: shops.id,
-          slug: shops.slug,
-          name: shops.name,
-          status: shops.status,
-          currency: shops.currency,
-          timezone: shops.timezone,
-        })
+        .select(shopColumns)
         .from(shops)
         .where(eq(shops.slug, slug))
         .limit(1)
 
-      if (byShopSlug) return byShopSlug
+      if (byShopSlug) {
+        return { ...byShopSlug, settings: (byShopSlug.settings ?? {}) as ShopSettings }
+      }
     }
 
     return null

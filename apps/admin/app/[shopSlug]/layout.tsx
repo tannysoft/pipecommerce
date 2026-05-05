@@ -22,6 +22,7 @@ export default async function ShopLayout({
     { href: `/${shop.slug}/dashboard`, label: 'Dashboard' },
     { href: `/${shop.slug}/products`, label: 'Products' },
     { href: `/${shop.slug}/collections`, label: 'Collections' },
+    { href: `/${shop.slug}/settings`, label: 'Settings' },
   ]
 
   return (
