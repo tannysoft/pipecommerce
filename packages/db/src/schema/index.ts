@@ -47,3 +47,12 @@ export * from './payment-providers.ts'
 export * from './payments.ts'
 export * from './shipping-zones.ts'
 export * from './shipping-rates.ts'
+
+// Phase 2g — CRM + loyalty (MVP only — tiers/referrals/events deferred to feature P2)
+export * from './customer-groups.ts'
+export * from './customer-group-members.ts'
+export * from './customer-notes.ts'
+export * from './loyalty-programs.ts'
+export * from './customer-loyalty.ts'
+export * from './loyalty-ledger.ts'
+export * from './loyalty-redemptions.ts'
