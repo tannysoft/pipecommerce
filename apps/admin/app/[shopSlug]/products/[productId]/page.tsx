@@ -1,10 +1,11 @@
 import { and, eq, isNull } from '@pipecommerce/db'
 import { productVariants, products } from '@pipecommerce/db/schema'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import { Card, CardContent, CardHeader, CardTitle } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
+import { ProductEditForm } from './edit-form.tsx'
 
 export default async function ProductDetailPage({
   params,
@@ -22,13 +23,14 @@ export default async function ProductDetailPage({
 
   if (!product) notFound()
 
-  const variants = await db
-    .select()
+  const [variant] = await db
+    .select({ price: productVariants.price })
     .from(productVariants)
     .where(eq(productVariants.productId, product.id))
+    .limit(1)
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-xl space-y-4">
       <Link
         href={`/${shopSlug}/products`}
         className="text-sm text-muted-foreground hover:text-foreground"
@@ -38,34 +40,20 @@ export default async function ProductDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{product.title}</CardTitle>
-          <CardDescription>
-            <span className="font-mono">{product.handle}</span> · status: {product.status}
-          </CardDescription>
+          <CardTitle>แก้ไขสินค้า</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {product.description ? (
-            <div className="prose prose-sm max-w-none">
-              <p className="whitespace-pre-wrap text-sm">{product.description}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">ไม่มีคำอธิบาย</p>
-          )}
-
-          <div>
-            <h3 className="text-sm font-medium">Variants ({variants.length})</h3>
-            <ul className="mt-2 space-y-1 text-sm">
-              {variants.map((v) => (
-                <li key={v.id} className="font-mono">
-                  {v.title} — ฿{v.price}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Edit form ทำใน Phase 3f-2 — ตอนนี้ดูข้อมูลได้อย่างเดียว
-          </p>
+        <CardContent>
+          <ProductEditForm
+            shopSlug={shopSlug}
+            product={{
+              id: product.id,
+              title: product.title,
+              handle: product.handle,
+              description: product.description,
+              status: product.status,
+            }}
+            price={variant?.price ?? null}
+          />
         </CardContent>
       </Card>
     </div>

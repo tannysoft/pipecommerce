@@ -24,7 +24,7 @@ export function createDb(connectionString: string) {
 export * from './schema/index.ts'
 export {
   sql,
-  eq, and, or, not,
+  eq, ne, and, or, not,
   asc, desc,
   gt, gte, lt, lte,
   inArray, notInArray,
