@@ -1347,7 +1347,88 @@ CREATE INDEX ON seo_redirects(shop_id, is_active);
 
 ---
 
-## 13. Platform Plumbing
+## 13. Content (articles + pages) `[MVP]`
+
+### `articles` `[MVP]`
+Blog post / news article — 1 implicit blog per shop (multi-blog deferred)
+
+```sql
+articles (
+  id              uuid PK,
+  shop_id         uuid → shops NOT NULL,
+  title           text NOT NULL,
+  handle          text NOT NULL,         -- URL slug
+  body            text,                   -- HTML
+  excerpt         text,
+  featured_image_id uuid,                -- → article_images.id (no FK; soft ref)
+  author_user_id  uuid,                  -- shop_members.user_id (no FK)
+  author_name     text,                   -- snapshot
+  status          text NOT NULL,          -- draft | active | archived
+  tags            text[] DEFAULT '{}',
+  seo_title, seo_description text,
+
+  search_vector   tsvector GENERATED ALWAYS AS (
+    public.compute_article_search_vector(title, tags, body)
+  ) STORED,
+
+  published_at, created_at, updated_at, deleted_at,
+  UNIQUE (shop_id, handle)
+)
+CREATE INDEX ON articles(shop_id, status, published_at);
+CREATE INDEX articles_search_idx ON articles USING GIN(search_vector);
+CREATE INDEX articles_title_trgm_idx ON articles USING GIN(title gin_trgm_ops);
+CREATE INDEX articles_handle_trgm_idx ON articles USING GIN(handle gin_trgm_ops);
+```
+
+`compute_article_search_vector(title, tags, body)` IMMUTABLE wrapper
+ใน migration `0014_article_search_function.sql` — pattern เดียวกับ products
+
+### `article_images` `[MVP]`
+Pipeline เดียวกับ product_images (R2 + low/mid/high variants)
+
+```sql
+article_images (
+  id, article_id → articles, shop_id → shops,
+  uuid (UNIQUE), ext, r2_key_orig,
+  alt, position,
+  width, height, bytes,
+  variants_status text DEFAULT 'pending', variants_error text,
+  created_at, updated_at, deleted_at
+)
+```
+
+URL pattern (เหมือน products): `cdn.yourapp.com/shops/{shop_id}/img/{uuid}/{low|mid|high}.webp`
+
+### `pages` `[MVP]`
+Static pages (about, contact, faq, terms, privacy, ...)
+
+```sql
+pages (
+  id, shop_id → shops,
+  title, handle text NOT NULL,
+  body text,                              -- HTML
+  template_suffix text,                   -- optional theme template variant
+  status text NOT NULL,                   -- draft | active | archived
+  seo_title, seo_description text,
+  published_at, created_at, updated_at, deleted_at,
+  UNIQUE (shop_id, handle)
+)
+CREATE INDEX ON pages(shop_id, status, published_at);
+```
+
+ไม่มี search_vector — pages = static, ไม่ index ใน main search
+
+### URL routing (storefront)
+
+```
+/blog                     → article list (paginated)
+/blog/{article-handle}    → article detail
+/pages/{page-handle}      → static page
+```
+
+---
+
+## 14. Platform Plumbing
 
 ### `plans` & `shop_subscriptions`
 ```sql

@@ -99,6 +99,27 @@
       "when": 1778003252786,
       "tag": "0013_enable_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1778003667103,
+      "tag": "0014_article_search_function",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1778003758264,
+      "tag": "0015_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1778003766033,
+      "tag": "0016_content_rls",
+      "breakpoints": true
     }
   ]
 }

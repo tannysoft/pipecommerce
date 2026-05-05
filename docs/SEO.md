@@ -44,8 +44,9 @@
 /collections/{handle}/products/{handle}   product within collection (canonical = /products/{handle})
 /cart                                     cart
 /search?q=...                             search
-/blog/{handle}                            P2: blog post
-/pages/{handle}                           P2: custom page (about, FAQ, ...)
+/blog                                     article list (paginated)
+/blog/{handle}                            article detail
+/pages/{handle}                           static page (about, FAQ, ...)
 ```
 
 **ห้าม:**
@@ -86,6 +87,7 @@ if (shop.primary_domain && host !== shop.primary_domain) {
 {shop-domain}/sitemap.xml         → sitemap index
 {shop-domain}/sitemap-products.xml
 {shop-domain}/sitemap-collections.xml
+{shop-domain}/sitemap-articles.xml
 {shop-domain}/sitemap-pages.xml
 ```
 
@@ -290,6 +292,39 @@ export function MetaTags({ title, description, canonical, ogImage, type = 'websi
     { "@type": "ListItem", "position": 2, "name": "Collection", "item": "..." },
     { "@type": "ListItem", "position": 3, "name": "Product Title", "item": "..." }
   ]
+}
+```
+
+### Article page (BlogPosting)
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "...",
+  "description": "...",
+  "image": ["...high.webp"],
+  "datePublished": "...",
+  "dateModified": "...",
+  "author": { "@type": "Person", "name": "..." },
+  "publisher": {
+    "@type": "Organization",
+    "name": "{shop.name}",
+    "logo": { "@type": "ImageObject", "url": "..." }
+  },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "{canonical}" }
+}
+```
+
+### Static page (WebPage)
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "...",
+  "description": "...",
+  "url": "{canonical}"
 }
 ```
 

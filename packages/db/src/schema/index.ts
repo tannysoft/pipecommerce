@@ -77,3 +77,8 @@ export * from './shop-subscriptions.ts'
 export * from './webhooks.ts'
 export * from './webhook-deliveries.ts'
 export * from './audit-logs.ts'
+
+// Phase 2L — content (articles + pages)
+export * from './articles.ts'
+export * from './article-images.ts'
+export * from './pages.ts'
