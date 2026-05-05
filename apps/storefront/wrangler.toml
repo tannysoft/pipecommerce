@@ -12,6 +12,9 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 # [[hyperdrive]]
 # binding = "HYPERDRIVE"
 # id = "TODO"
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "c69bebaa86c64434b14d49c393dae1f1"
 
 # KV — shop-by-domain cache, draft tokens, redirect cache
 [[kv_namespaces]]
