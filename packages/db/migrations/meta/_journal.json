@@ -71,6 +71,13 @@
       "when": 1778002783028,
       "tag": "0009_loyalty_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778002893712,
+      "tag": "0010_themes",
+      "breakpoints": true
     }
   ]
 }

@@ -56,3 +56,9 @@ export * from './loyalty-programs.ts'
 export * from './customer-loyalty.ts'
 export * from './loyalty-ledger.ts'
 export * from './loyalty-redemptions.ts'
+
+// Phase 2h — themes + drag-drop builder
+export * from './themes.ts'
+export * from './shop-theme-settings.ts'
+export * from './shop-theme-assets.ts'
+export * from './theme-draft-tokens.ts'
