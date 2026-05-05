@@ -1,0 +1,112 @@
+'use server'
+
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { and, eq } from '@pipecommerce/db'
+import { productImages, products } from '@pipecommerce/db/schema'
+import { revalidatePath } from 'next/cache'
+import { db } from '@/lib/db.ts'
+import { r2, R2_BUCKET } from '@/lib/r2.ts'
+import { requireShop } from '@/lib/shop.ts'
+
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+}
+
+const MAX_BYTES = 8 * 1024 * 1024 // 8 MB — server action body limit ตั้งไว้ 10mb
+
+export type UploadImageResult = { ok: true; imageId: string } | { ok: false; error: string }
+
+export async function uploadProductImage(
+  shopSlug: string,
+  productId: string,
+  formData: FormData,
+): Promise<UploadImageResult> {
+  const { shop } = await requireShop(shopSlug)
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) return { ok: false, error: 'no file' }
+  if (file.size === 0) return { ok: false, error: 'ไฟล์ว่าง' }
+  if (file.size > MAX_BYTES) {
+    return { ok: false, error: `ไฟล์ใหญ่เกิน ${MAX_BYTES / 1024 / 1024} MB` }
+  }
+  const ext = ALLOWED_TYPES[file.type]
+  if (!ext) return { ok: false, error: `รองรับเฉพาะ ${Object.keys(ALLOWED_TYPES).join(', ')}` }
+
+  // verify product belong shop
+  const [product] = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.id, productId), eq(products.shopId, shop.id)))
+    .limit(1)
+  if (!product) return { ok: false, error: 'ไม่พบสินค้า' }
+
+  const imageUuid = crypto.randomUUID()
+  const r2Key = `shops/${shop.id}/orig/${imageUuid}.${ext}`
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await r2.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: r2Key,
+      Body: buffer,
+      ContentType: file.type,
+    }),
+  )
+
+  // ใน MVP ไม่มี variant pipeline → mark ready เลย ใช้ original ตรงๆ
+  // Phase ถัดไป (queue worker) จะ generate low/mid/high แล้ว update ตอนเสร็จ
+  const [inserted] = await db
+    .insert(productImages)
+    .values({
+      productId,
+      shopId: shop.id,
+      uuid: imageUuid,
+      ext,
+      r2KeyOrig: r2Key,
+      bytes: file.size,
+      variantsStatus: 'ready',
+    })
+    .returning({ id: productImages.id })
+
+  revalidatePath(`/${shopSlug}/products/${productId}`)
+  return { ok: true, imageId: inserted!.id }
+}
+
+export async function deleteProductImage(
+  shopSlug: string,
+  productId: string,
+  imageId: string,
+): Promise<{ ok: boolean }> {
+  const { shop } = await requireShop(shopSlug)
+
+  const [image] = await db
+    .select({ id: productImages.id, r2KeyOrig: productImages.r2KeyOrig })
+    .from(productImages)
+    .where(
+      and(
+        eq(productImages.id, imageId),
+        eq(productImages.productId, productId),
+        eq(productImages.shopId, shop.id),
+      ),
+    )
+    .limit(1)
+  if (!image) return { ok: false }
+
+  // Soft delete in DB; R2 cleanup ทำได้ตรงๆ ตอนนี้ก่อน — ถ้ามี cron ค่อยย้ายไป
+  await r2
+    .send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: image.r2KeyOrig }))
+    .catch(() => {
+      /* swallow R2 not-found, DB ยัง mark deleted */
+    })
+  await db
+    .update(productImages)
+    .set({ deletedAt: new Date() })
+    .where(eq(productImages.id, imageId))
+
+  revalidatePath(`/${shopSlug}/products/${productId}`)
+  return { ok: true }
+}

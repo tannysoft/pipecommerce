@@ -1,11 +1,13 @@
-import { and, eq, isNull } from '@pipecommerce/db'
-import { productVariants, products } from '@pipecommerce/db/schema'
+import { and, asc, eq, isNull } from '@pipecommerce/db'
+import { productImages, productVariants, products } from '@pipecommerce/db/schema'
 import { Card, CardContent, CardHeader, CardTitle } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
+import { publicImageUrl } from '@/lib/r2.ts'
 import { requireShop } from '@/lib/shop.ts'
 import { ProductEditForm } from './edit-form.tsx'
+import { ImageUploader } from './image-uploader.tsx'
 
 export default async function ProductDetailPage({
   params,
@@ -29,14 +31,43 @@ export default async function ProductDetailPage({
     .where(eq(productVariants.productId, product.id))
     .limit(1)
 
+  const images = await db
+    .select({
+      id: productImages.id,
+      r2KeyOrig: productImages.r2KeyOrig,
+      alt: productImages.alt,
+      bytes: productImages.bytes,
+    })
+    .from(productImages)
+    .where(and(eq(productImages.productId, product.id), isNull(productImages.deletedAt)))
+    .orderBy(asc(productImages.position), asc(productImages.createdAt))
+
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <Link
         href={`/${shopSlug}/products`}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
         ← กลับไปรายการสินค้า
       </Link>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>รูปภาพ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUploader
+            shopSlug={shopSlug}
+            productId={product.id}
+            images={images.map((img) => ({
+              id: img.id,
+              publicUrl: publicImageUrl(img.r2KeyOrig),
+              alt: img.alt,
+              bytes: img.bytes,
+            }))}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -5,6 +5,11 @@ const config: NextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // image upload
+    },
+  },
 }
 
 export default config

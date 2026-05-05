@@ -1,9 +1,10 @@
-import { and, desc, eq, isNull } from '@pipecommerce/db'
-import { products } from '@pipecommerce/db/schema'
+import { and, asc, desc, eq, inArray, isNull } from '@pipecommerce/db'
+import { productImages, products } from '@pipecommerce/db/schema'
 import { Button } from '@pipecommerce/ui'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
+import { publicImageUrl } from '@/lib/image.ts'
 import { lookupShopByHost } from '@/lib/shop.ts'
 
 export default async function HomePage() {
@@ -11,7 +12,6 @@ export default async function HomePage() {
   const host = h.get('x-shop-host') ?? ''
   const shop = host ? await lookupShopByHost(host) : null
 
-  // Platform welcome (host ไม่ใช่ shop)
   if (!shop) {
     return (
       <main className="mx-auto max-w-2xl space-y-4 p-8">
@@ -30,7 +30,6 @@ export default async function HomePage() {
     )
   }
 
-  // Recent products preview
   const featured = await db
     .select({
       id: products.id,
@@ -47,6 +46,24 @@ export default async function HomePage() {
     )
     .orderBy(desc(products.publishedAt))
     .limit(4)
+
+  const featuredIds = featured.map((p) => p.id)
+  const featuredImages = featuredIds.length
+    ? await db
+        .select({
+          productId: productImages.productId,
+          r2KeyOrig: productImages.r2KeyOrig,
+        })
+        .from(productImages)
+        .where(
+          and(inArray(productImages.productId, featuredIds), isNull(productImages.deletedAt)),
+        )
+        .orderBy(asc(productImages.productId), asc(productImages.position))
+    : []
+  const firstImage = new Map<string, string>()
+  for (const img of featuredImages) {
+    if (!firstImage.has(img.productId)) firstImage.set(img.productId, img.r2KeyOrig)
+  }
 
   return (
     <main className="mx-auto max-w-5xl space-y-8 p-6">
@@ -69,18 +86,30 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {featured.map((p) => (
-              <Link
-                key={p.id}
-                href={`/products/${p.handle}`}
-                className="group rounded-xl border bg-card p-3 transition hover:shadow-md"
-              >
-                <div className="aspect-square rounded-lg bg-muted" />
-                <h3 className="mt-3 line-clamp-2 text-sm font-medium group-hover:text-primary">
-                  {p.title}
-                </h3>
-              </Link>
-            ))}
+            {featured.map((p) => {
+              const r2Key = firstImage.get(p.id)
+              return (
+                <Link
+                  key={p.id}
+                  href={`/products/${p.handle}`}
+                  className="group rounded-xl border bg-card p-3 transition hover:shadow-md"
+                >
+                  {r2Key ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={publicImageUrl(r2Key)}
+                      alt={p.title}
+                      className="aspect-square w-full rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="aspect-square rounded-lg bg-muted" />
+                  )}
+                  <h3 className="mt-3 line-clamp-2 text-sm font-medium group-hover:text-primary">
+                    {p.title}
+                  </h3>
+                </Link>
+              )
+            })}
           </div>
         </section>
       ) : (

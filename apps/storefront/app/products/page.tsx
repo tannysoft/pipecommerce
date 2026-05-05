@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray, isNull, min } from '@pipecommerce/db'
-import { productVariants, products } from '@pipecommerce/db/schema'
+import { and, asc, desc, eq, inArray, isNull, min } from '@pipecommerce/db'
+import { productImages, productVariants, products } from '@pipecommerce/db/schema'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
+import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
 export default async function ProductsPage() {
@@ -25,17 +26,39 @@ export default async function ProductsPage() {
     .limit(60)
 
   const ids = productList.map((p) => p.id)
-  const priceRows = ids.length
-    ? await db
-        .select({
-          productId: productVariants.productId,
-          fromPrice: min(productVariants.price),
-        })
-        .from(productVariants)
-        .where(inArray(productVariants.productId, ids))
-        .groupBy(productVariants.productId)
-    : []
+
+  const [priceRows, imageRows] = ids.length
+    ? await Promise.all([
+        db
+          .select({
+            productId: productVariants.productId,
+            fromPrice: min(productVariants.price),
+          })
+          .from(productVariants)
+          .where(inArray(productVariants.productId, ids))
+          .groupBy(productVariants.productId),
+        // ดึงรูปทั้งหมดของ products เหล่านี้ → group ใน JS เลือกตัวที่ position น้อยสุด
+        db
+          .select({
+            productId: productImages.productId,
+            r2KeyOrig: productImages.r2KeyOrig,
+            position: productImages.position,
+          })
+          .from(productImages)
+          .where(
+            and(inArray(productImages.productId, ids), isNull(productImages.deletedAt)),
+          )
+          .orderBy(asc(productImages.productId), asc(productImages.position)),
+      ])
+    : [[], []]
+
   const priceMap = new Map(priceRows.map((r) => [r.productId, r.fromPrice]))
+  const firstImageByProduct = new Map<string, string>()
+  for (const img of imageRows) {
+    if (!firstImageByProduct.has(img.productId)) {
+      firstImageByProduct.set(img.productId, img.r2KeyOrig)
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 p-6">
@@ -54,21 +77,33 @@ export default async function ProductsPage() {
         <p className="text-muted-foreground">ยังไม่มีสินค้าวางจำหน่าย</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {productList.map((p) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.handle}`}
-              className="group rounded-xl border bg-card p-3 transition hover:shadow-md"
-            >
-              <div className="aspect-square rounded-lg bg-muted" />
-              <h2 className="mt-3 line-clamp-2 text-sm font-medium group-hover:text-primary">
-                {p.title}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                ฿{priceMap.get(p.id) ?? '—'}
-              </p>
-            </Link>
-          ))}
+          {productList.map((p) => {
+            const r2Key = firstImageByProduct.get(p.id)
+            return (
+              <Link
+                key={p.id}
+                href={`/products/${p.handle}`}
+                className="group rounded-xl border bg-card p-3 transition hover:shadow-md"
+              >
+                {r2Key ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={publicImageUrl(r2Key)}
+                    alt={p.title}
+                    className="aspect-square w-full rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="aspect-square rounded-lg bg-muted" />
+                )}
+                <h2 className="mt-3 line-clamp-2 text-sm font-medium group-hover:text-primary">
+                  {p.title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  ฿{priceMap.get(p.id) ?? '—'}
+                </p>
+              </Link>
+            )
+          })}
         </div>
       )}
     </main>

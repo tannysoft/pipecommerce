@@ -20,6 +20,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.700.0
+        version: 3.984.0
       '@pipecommerce/auth':
         specifier: workspace:*
         version: link:../../packages/auth

@@ -1,9 +1,10 @@
-import { and, eq, isNull } from '@pipecommerce/db'
-import { productVariants, products } from '@pipecommerce/db/schema'
+import { and, asc, eq, isNull } from '@pipecommerce/db'
+import { productImages, productVariants, products } from '@pipecommerce/db/schema'
 import { Button } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
+import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
 const fmtBaht = (raw: string) =>
@@ -32,11 +33,22 @@ export default async function ProductDetailPage({
 
   if (!product) notFound()
 
-  const variants = await db
-    .select()
-    .from(productVariants)
-    .where(eq(productVariants.productId, product.id))
-    .orderBy(productVariants.position)
+  const [variants, images] = await Promise.all([
+    db
+      .select()
+      .from(productVariants)
+      .where(eq(productVariants.productId, product.id))
+      .orderBy(productVariants.position),
+    db
+      .select({
+        id: productImages.id,
+        r2KeyOrig: productImages.r2KeyOrig,
+        alt: productImages.alt,
+      })
+      .from(productImages)
+      .where(and(eq(productImages.productId, product.id), isNull(productImages.deletedAt)))
+      .orderBy(asc(productImages.position), asc(productImages.createdAt)),
+  ])
 
   const minPrice = variants.length
     ? variants
@@ -54,14 +66,37 @@ export default async function ProductDetailPage({
       </Link>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        {/* รูปสินค้า — placeholder จนกว่า Phase 3i (image pipeline) เสร็จ */}
-        <div className="aspect-square rounded-xl border bg-muted" />
+        <div className="space-y-2">
+          {images.length > 0 ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={publicImageUrl(images[0]!.r2KeyOrig)}
+                alt={images[0]!.alt ?? product.title}
+                className="aspect-square w-full rounded-xl border object-cover"
+              />
+              {images.length > 1 ? (
+                <div className="grid grid-cols-4 gap-2">
+                  {images.slice(0, 4).map((img) => (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      key={img.id}
+                      src={publicImageUrl(img.r2KeyOrig)}
+                      alt={img.alt ?? product.title}
+                      className="aspect-square w-full rounded-lg border object-cover"
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="aspect-square rounded-xl border bg-muted" />
+          )}
+        </div>
 
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.title}</h1>
-          <p className="text-2xl font-semibold">
-            ฿{fmtBaht(minPrice.toFixed(2))}
-          </p>
+          <p className="text-2xl font-semibold">฿{fmtBaht(minPrice.toFixed(2))}</p>
 
           {product.description ? (
             <div className="space-y-1">

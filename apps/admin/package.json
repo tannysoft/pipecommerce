@@ -14,6 +14,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0",
     "@pipecommerce/auth": "workspace:*",
     "@pipecommerce/db": "workspace:*",
     "@pipecommerce/ui": "workspace:*",
