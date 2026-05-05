@@ -5,3 +5,16 @@
 /* Tailwind 4 scope ของ default scan = app root เท่านั้น
    ต้องบอกให้ scan classes ใน workspace packages ที่ใช้ JSX class ด้วย */
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+/* Admin fonts — variables ส่งมาจาก next/font ใน app/layout.tsx
+   override token จาก preset.css (preset import มาก่อน) */
+@theme inline {
+  --font-sans: var(--font-google-sans), 'Noto Sans Thai', system-ui, sans-serif;
+  --font-heading: var(--font-noto-thai), var(--font-google-sans), system-ui, sans-serif;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
