@@ -1,42 +1,32 @@
 import { createServerClient } from '@pipecommerce/auth/admin/server'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
-import { logout } from './actions.ts'
+import { eq } from '@pipecommerce/db'
+import { shopMembers, shops } from '@pipecommerce/db/schema'
+import { redirect } from 'next/navigation'
+import { db } from '@/lib/db.ts'
 
+/**
+ * Root admin route — middleware รับประกันว่า user login แล้ว
+ * (ไม่งั้น redirect /login ไปก่อนถึงที่นี่)
+ *
+ * 0 shops → /onboarding
+ * 1+ shops → /{slug}/dashboard (default ตัวแรก, multi-shop picker ทำทีหลัง)
+ */
 export default async function AdminHome() {
   const supabase = await createServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">PipeCommerce Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Logged in as <span className="font-mono">{user?.email}</span>
-          </p>
-        </div>
-        <form action={logout}>
-          <Button type="submit" variant="outline" size="sm">
-            Logout
-          </Button>
-        </form>
-      </div>
+  const memberships = await db
+    .select({ slug: shops.slug })
+    .from(shopMembers)
+    .innerJoin(shops, eq(shopMembers.shopId, shops.id))
+    .where(eq(shopMembers.userId, user.id))
+    .limit(2)
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Phase 3c verified</CardTitle>
-          <CardDescription>
-            Auth flow ทำงาน — middleware gate route, Supabase session refresh, magic link callback
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Next: shop creation flow (Phase 3d)
-          </p>
-        </CardContent>
-      </Card>
-    </main>
-  )
+  if (memberships.length === 0) redirect('/onboarding')
+
+  // TODO: memberships.length > 1 → /shops picker (จำตัวสุดท้ายผ่าน cookie)
+  redirect(`/${memberships[0]!.slug}/dashboard`)
 }
