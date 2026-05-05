@@ -34,3 +34,10 @@ export * from './order-line-items.ts'
 export * from './fulfillments.ts'
 export * from './fulfillment-line-items.ts'
 export * from './refunds.ts'
+
+// Phase 2e — discounts + tax + junction tables
+export * from './discounts.ts'
+export * from './discount-usages.ts'
+export * from './tax-rates.ts'
+export * from './cart-discount-codes.ts'
+export * from './order-discount-applications.ts'

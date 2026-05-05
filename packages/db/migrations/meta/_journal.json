@@ -43,6 +43,13 @@
       "when": 1778002335881,
       "tag": "0005_sloppy_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778002471623,
+      "tag": "0006_happy_stone_men",
+      "breakpoints": true
     }
   ]
 }
