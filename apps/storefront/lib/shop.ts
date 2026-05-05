@@ -1,5 +1,7 @@
 import { and, eq } from '@pipecommerce/db'
 import { shopDomains, shops } from '@pipecommerce/db/schema'
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { db } from './db.ts'
 
@@ -79,3 +81,19 @@ export const lookupShopByHost = cache(
     return null
   },
 )
+
+/**
+ * Variant ของ lookupShopByHost ที่บังคับว่าต้องเจอ shop —
+ * notFound() ถ้าไม่เจอ. ใช้ใน /products/[handle], /collections/[handle], etc.
+ *
+ * Home page (/) ใช้ lookupShopByHost ตรงๆ เพื่อ render platform welcome
+ * แทนที่จะ 404 เมื่อ host ไม่ใช่ shop
+ */
+export async function requireShopFromHost(): Promise<StorefrontShop> {
+  const h = await headers()
+  const host = h.get('x-shop-host') ?? ''
+  if (!host) notFound()
+  const shop = await lookupShopByHost(host)
+  if (!shop) notFound()
+  return shop
+}
