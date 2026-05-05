@@ -70,3 +70,10 @@ export * from './bulk-jobs.ts'
 export * from './report-snapshots-daily.ts'
 export * from './report-email-subscriptions.ts'
 export * from './seo-redirects.ts'
+
+// Phase 2j — platform plumbing
+export * from './plans.ts'
+export * from './shop-subscriptions.ts'
+export * from './webhooks.ts'
+export * from './webhook-deliveries.ts'
+export * from './audit-logs.ts'
