@@ -1,3 +1,7 @@
 @import 'tailwindcss';
-@import '@pipecommerce/ui/styles';
-@import '@pipecommerce/config/tailwind/preset';
+@import '../../../packages/ui/src/styles/globals.css';
+@import '../../../packages/config/tailwind/preset.css';
+
+/* Tailwind 4 scope ของ default scan = app root เท่านั้น
+   ต้องบอกให้ scan classes ใน workspace packages ที่ใช้ JSX class ด้วย */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
