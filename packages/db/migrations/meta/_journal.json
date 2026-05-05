@@ -15,6 +15,20 @@
       "when": 1778000455733,
       "tag": "0001_brave_jocasta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778001287204,
+      "tag": "0002_enable_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778001511568,
+      "tag": "0003_tired_xorn",
+      "breakpoints": true
     }
   ]
 }

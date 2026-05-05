@@ -11,3 +11,11 @@ export * from './customers.ts'
 export * from './customer-identities.ts'
 export * from './customer-sessions.ts'
 export * from './shop-auth-settings.ts'
+
+// Phase 2b — catalog
+export * from './products.ts'
+export * from './product-options.ts'
+export * from './product-variants.ts'
+export * from './product-images.ts'
+export * from './collections.ts'
+export * from './collection-products.ts'
