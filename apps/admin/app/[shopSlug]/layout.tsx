@@ -21,6 +21,7 @@ export default async function ShopLayout({
   const navItems = [
     { href: `/${shop.slug}/dashboard`, label: 'Dashboard' },
     { href: `/${shop.slug}/products`, label: 'Products' },
+    { href: `/${shop.slug}/collections`, label: 'Collections' },
   ]
 
   return (
