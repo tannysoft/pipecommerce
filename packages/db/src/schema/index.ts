@@ -19,3 +19,8 @@ export * from './product-variants.ts'
 export * from './product-images.ts'
 export * from './collections.ts'
 export * from './collection-products.ts'
+
+// Phase 2c — inventory
+export * from './locations.ts'
+export * from './inventory-items.ts'
+export * from './inventory-movements.ts'
