@@ -9,6 +9,21 @@ import { requireShop } from '@/lib/shop.ts'
 
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
+/**
+ * Parse comma-separated tag string → unique lowercase array
+ * normalize: trim + lowercase + dedupe + drop empty
+ * cap ที่ 20 tags ต่อสินค้า กัน abuse
+ */
+function parseTags(raw: string): string[] {
+  if (!raw) return []
+  const list = raw
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((t) => t.length <= 50)
+  return [...new Set(list)].slice(0, 20)
+}
+
 export type CreateProductResult = { ok: true } | { ok: false; error: string }
 
 export async function createProduct(
@@ -22,6 +37,7 @@ export async function createProduct(
   const description = String(formData.get('description') ?? '').trim() || null
   const status = String(formData.get('status') ?? 'draft')
   const priceRaw = String(formData.get('price') ?? '').trim()
+  const tags = parseTags(String(formData.get('tags') ?? ''))
 
   if (!title) return { ok: false, error: 'กรุณากรอกชื่อสินค้า' }
   if (handle.length < 1 || handle.length > 60) {
@@ -58,6 +74,7 @@ export async function createProduct(
           handle,
           description,
           status,
+          tags,
           publishedAt: status === 'active' ? new Date() : null,
         })
         .returning({ id: products.id })
@@ -100,6 +117,7 @@ export async function updateProduct(
   const description = String(formData.get('description') ?? '').trim() || null
   const status = String(formData.get('status') ?? 'draft')
   const priceRaw = String(formData.get('price') ?? '').trim()
+  const tags = parseTags(String(formData.get('tags') ?? ''))
 
   if (!title) return { ok: false, error: 'กรุณากรอกชื่อสินค้า' }
   if (!HANDLE_PATTERN.test(handle) || handle.length > 60) {
@@ -146,6 +164,7 @@ export async function updateProduct(
           handle,
           description,
           status,
+          tags,
           publishedAt:
             status === 'active' && existing.currentStatus !== 'active' ? new Date() : undefined,
           updatedAt: new Date(),

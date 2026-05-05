@@ -125,6 +125,20 @@ export default async function ProductDetailPage({
             เพิ่มลงตะกร้า (Phase ถัดไป)
           </Button>
 
+          {product.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {product.tags.map((t) => (
+                <Link
+                  key={t}
+                  href={`/tags/${encodeURIComponent(t)}`}
+                  className="rounded-full border bg-secondary/50 px-2.5 py-0.5 text-xs hover:bg-secondary"
+                >
+                  #{t}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
           <p className="text-xs text-muted-foreground">
             handle: <span className="font-mono">{product.handle}</span>
           </p>

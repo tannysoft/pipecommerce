@@ -10,6 +10,7 @@ type Product = {
   handle: string
   description: string | null
   status: string
+  tags: string[]
 }
 
 export function ProductEditForm({
@@ -102,6 +103,18 @@ export function ProductEditForm({
             defaultValue={product.description ?? ''}
             className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tags">Tags</Label>
+          <Input
+            id="tags"
+            name="tags"
+            disabled={pending}
+            defaultValue={product.tags.join(', ')}
+            placeholder="summer, sale, new"
+          />
+          <p className="text-xs text-muted-foreground">คั่นด้วย comma · ปัจจุบัน {product.tags.length} tags</p>
         </div>
 
         <fieldset className="space-y-2">

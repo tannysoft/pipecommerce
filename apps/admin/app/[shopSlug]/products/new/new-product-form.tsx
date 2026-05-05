@@ -95,6 +95,14 @@ export function NewProductForm({ shopSlug }: { shopSlug: string }) {
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="tags">Tags</Label>
+        <Input id="tags" name="tags" disabled={pending} placeholder="summer, sale, new" />
+        <p className="text-xs text-muted-foreground">
+          คั่นด้วย comma — lowercase อัตโนมัติ, สูงสุด 20 tags
+        </p>
+      </div>
+
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Status</legend>
         <div className="flex gap-4">

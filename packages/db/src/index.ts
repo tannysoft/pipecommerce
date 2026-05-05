@@ -30,5 +30,6 @@ export {
   inArray, notInArray,
   isNull, isNotNull,
   like, ilike,
+  arrayContains, arrayContained, arrayOverlaps,
   count, sum, avg, min, max,
 } from 'drizzle-orm'

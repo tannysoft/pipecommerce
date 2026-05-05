@@ -82,6 +82,7 @@ export default async function ProductDetailPage({
               handle: product.handle,
               description: product.description,
               status: product.status,
+              tags: product.tags ?? [],
             }}
             price={variant?.price ?? null}
           />
