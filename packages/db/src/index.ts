@@ -22,4 +22,13 @@ export function createDb(connectionString: string) {
 }
 
 export * from './schema/index.ts'
-export { sql, eq, and, or, not, asc, desc, gt, gte, lt, lte, inArray } from 'drizzle-orm'
+export {
+  sql,
+  eq, and, or, not,
+  asc, desc,
+  gt, gte, lt, lte,
+  inArray, notInArray,
+  isNull, isNotNull,
+  like, ilike,
+  count, sum, avg, min, max,
+} from 'drizzle-orm'
