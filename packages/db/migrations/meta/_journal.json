@@ -50,6 +50,13 @@
       "when": 1778002471623,
       "tag": "0006_happy_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778002651355,
+      "tag": "0007_payment_shipping",
+      "breakpoints": true
     }
   ]
 }

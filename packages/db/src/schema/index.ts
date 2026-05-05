@@ -41,3 +41,9 @@ export * from './discount-usages.ts'
 export * from './tax-rates.ts'
 export * from './cart-discount-codes.ts'
 export * from './order-discount-applications.ts'
+
+// Phase 2f — payment + shipping
+export * from './payment-providers.ts'
+export * from './payments.ts'
+export * from './shipping-zones.ts'
+export * from './shipping-rates.ts'
