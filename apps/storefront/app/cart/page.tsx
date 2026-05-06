@@ -121,9 +121,7 @@ export default async function CartPage() {
               </div>
             </dl>
             <Link href="/checkout" className="mt-4 block">
-              <Button className="w-full" disabled>
-                ไปที่ Checkout (Phase 4f-2)
-              </Button>
+              <Button className="w-full">ไปที่ Checkout</Button>
             </Link>
           </aside>
         </div>
