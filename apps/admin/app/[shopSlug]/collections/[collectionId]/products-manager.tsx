@@ -1,14 +1,19 @@
-import { Button, Select } from '@pipecommerce/ui'
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@pipecommerce/ui'
 import { addProductToCollection, removeProductFromCollection } from '../actions.ts'
 
 type Item = { id: string; title: string; handle: string }
 
 /**
  * Server component (ไม่ใช่ client) — ใช้ Server Action ผ่าน <form>
- *
- * Layout:
- *   - "สินค้าใน collection": list + Remove button
- *   - "เพิ่มสินค้า": dropdown of available products + Add
+ * Radix Select รองรับ name prop → render hidden native select ให้
+ * อัตโนมัติ FormData picks up value
  */
 export function CollectionProductsManager({
   shopSlug,
@@ -61,17 +66,20 @@ export function CollectionProductsManager({
             action={addProductToCollection.bind(null, shopSlug, collectionId)}
             className="flex gap-2"
           >
-            <Select
-              name="productId"
-              required
-              className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {available.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </Select>
+            <div className="flex-1">
+              <Select name="productId" required defaultValue={available[0]!.id}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกสินค้า" />
+                </SelectTrigger>
+                <SelectContent>
+                  {available.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="submit">+ Add</Button>
           </form>
         )}

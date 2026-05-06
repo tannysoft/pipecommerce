@@ -1,3 +1,8 @@
+export {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from './components/avatar.tsx'
 export { Button, buttonVariants, type ButtonProps } from './components/button.tsx'
 export {
   Card,
@@ -8,6 +13,18 @@ export {
   CardTitle,
 } from './components/card.tsx'
 export { Checkbox } from './components/checkbox.tsx'
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from './components/dialog.tsx'
 export {
   Form,
   FormControl,
@@ -21,6 +38,18 @@ export {
 export { Input } from './components/input.tsx'
 export { Label } from './components/label.tsx'
 export { RadioGroup, RadioGroupItem } from './components/radio-group.tsx'
-export { Select } from './components/select.tsx'
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from './components/select.tsx'
+export { Separator } from './components/separator.tsx'
 export { Textarea } from './components/textarea.tsx'
 export { cn } from './lib/utils.ts'

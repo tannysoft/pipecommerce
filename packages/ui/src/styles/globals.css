@@ -3,7 +3,13 @@
  *
  * Apps import นี้หลัง @import "tailwindcss" ใน globals.css
  * จะได้ utility คลาส bg-background, text-foreground, etc. + dark mode
+ *
+ * tw-animate-css ให้ utility data-[state=open]:animate-in / fade-in-0 /
+ * zoom-in-95 / slide-in-from-* ที่ Radix components ต้องการ
  */
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);

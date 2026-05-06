@@ -1,6 +1,16 @@
 'use client'
 
-import { Button, Input, Label, Select, Textarea } from '@pipecommerce/ui'
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { placeOrder } from './actions.ts'
 
@@ -116,13 +126,13 @@ export function CheckoutForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="country">ประเทศ</Label>
-            <Select
-              id="country"
-              name="country"
-              defaultValue="TH"
-              disabled={pending}
-            >
-              <option value="TH">ไทย</option>
+            <Select name="country" defaultValue="TH" disabled={pending}>
+              <SelectTrigger id="country">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TH">ไทย</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>

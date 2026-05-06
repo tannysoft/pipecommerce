@@ -1,18 +1,32 @@
 import { sql } from '@pipecommerce/db'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Select } from '@pipecommerce/ui'
+import {
+  Avatar,
+  AvatarFallback,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
-import { changeMemberRole, removeMember } from './actions.ts'
+import { removeMember } from './actions.ts'
 import { InviteMemberForm } from './invite-form.tsx'
-
-const ROLES = ['owner', 'admin', 'staff', 'viewer'] as const
+import { RoleSelect } from './role-select.tsx'
 
 const ROLE_BADGE: Record<string, string> = {
   owner: 'bg-purple-100 text-purple-700',
   admin: 'bg-blue-100 text-blue-700',
   staff: 'bg-gray-100 text-gray-700',
   viewer: 'bg-yellow-100 text-yellow-700',
+}
+
+function initials(email: string | null): string {
+  if (!email) return '?'
+  const local = email.split('@')[0] ?? ''
+  return local.slice(0, 2).toUpperCase()
 }
 
 export default async function MembersPage({
@@ -23,7 +37,6 @@ export default async function MembersPage({
   const { shopSlug } = await params
   const { shop, user: currentUser } = await requireShop(shopSlug)
 
-  // shop_members + auth.users join — ใช้ raw sql เพราะ auth schema separate
   const memberRows = await db.execute<{
     user_id: string
     email: string | null
@@ -73,70 +86,51 @@ export default async function MembersPage({
           <CardTitle>Members ปัจจุบัน ({members.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/40 text-left">
-              <tr>
-                <th className="px-4 py-2 font-medium">Email</th>
-                <th className="px-4 py-2 font-medium">Role</th>
-                <th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => {
-                const isMe = m.user_id === currentUser.id
-                return (
-                  <tr key={m.user_id} className="border-b last:border-b-0">
-                    <td className="px-4 py-2">
+          <ul className="divide-y">
+            {members.map((m) => {
+              const isMe = m.user_id === currentUser.id
+              return (
+                <li
+                  key={m.user_id}
+                  className="flex items-center gap-3 px-4 py-3"
+                >
+                  <Avatar>
+                    <AvatarFallback>{initials(m.email)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
                       {m.email ?? <span className="text-muted-foreground">—</span>}
                       {isMe ? (
                         <span className="ml-2 text-xs text-muted-foreground">(คุณ)</span>
                       ) : null}
-                    </td>
-                    <td className="px-4 py-2">
-                      {isMe ? (
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs ${ROLE_BADGE[m.role] ?? ROLE_BADGE.staff}`}
-                        >
-                          {m.role}
-                        </span>
-                      ) : (
-                        <form
-                          action={changeMemberRole.bind(null, shopSlug, m.user_id)}
-                          className="inline"
-                        >
-                          <Select
-                            name="role"
-                            defaultValue={m.role}
-                            onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                          >
-                            {ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </Select>
-                        </form>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {!isMe ? (
-                        <form action={removeMember.bind(null, shopSlug, m.user_id)}>
-                          <Button
-                            type="submit"
-                            variant="outline"
-                            size="sm"
-                            formAction={removeMember.bind(null, shopSlug, m.user_id)}
-                          >
-                            Remove
-                          </Button>
-                        </form>
-                      ) : null}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isMe ? (
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs ${ROLE_BADGE[m.role] ?? ROLE_BADGE.staff}`}
+                      >
+                        {m.role}
+                      </span>
+                    ) : (
+                      <RoleSelect
+                        shopSlug={shopSlug}
+                        userId={m.user_id}
+                        currentRole={m.role}
+                      />
+                    )}
+                    {!isMe ? (
+                      <form action={removeMember.bind(null, shopSlug, m.user_id)}>
+                        <Button type="submit" variant="outline" size="sm">
+                          Remove
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         </CardContent>
       </Card>
 

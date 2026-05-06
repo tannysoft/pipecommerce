@@ -1,6 +1,15 @@
 'use client'
 
-import { Button, Input, Label, Select } from '@pipecommerce/ui'
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@pipecommerce/ui'
 import { useRef, useState, useTransition } from 'react'
 import { inviteMember } from './actions.ts'
 
@@ -42,19 +51,19 @@ export function InviteMemberForm({ shopSlug }: { shopSlug: string }) {
           placeholder="user@example.com"
         />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1 sm:w-56">
         <Label htmlFor="role">Role</Label>
-        <Select
-          id="role"
-          name="role"
-          defaultValue="staff"
-          disabled={pending}
-        >
-          {ROLES.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
+        <Select name="role" defaultValue="staff" disabled={pending}>
+          <SelectTrigger id="role">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ROLES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>
+                {r.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <Button type="submit" disabled={pending}>

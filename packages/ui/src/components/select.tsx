@@ -1,46 +1,160 @@
+'use client'
+
+import * as SelectPrimitive from '@radix-ui/react-select'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import * as React from 'react'
 import { cn } from '../lib/utils.ts'
 
 /**
- * Native <select> wrapper styled ตาม shadcn — ทำงานกับ form action ตรงๆ
- * (FormData picks up value โดยอัตโนมัติ ไม่ต้องใช้ Radix Select + hidden input)
+ * Radix Select — dropdown เปิดผ่าน Portal คุม style ได้เต็ม + รับ font จาก parent
+ *
+ * Form action wiring: ใส่ `name` prop ที่ <Select> root → Radix render
+ * hidden native select ให้อัตโนมัติ → FormData picks up value
  *
  * Usage:
  *   <Select name="status" defaultValue="draft">
- *     <option value="draft">Draft</option>
- *     <option value="active">Active</option>
+ *     <SelectTrigger><SelectValue /></SelectTrigger>
+ *     <SelectContent>
+ *       <SelectItem value="draft">Draft</SelectItem>
+ *       <SelectItem value="active">Active</SelectItem>
+ *     </SelectContent>
  *   </Select>
  *
- * Optgroup ก็ใช้ได้ตามปกติ:
- *   <Select name="font">
- *     <optgroup label="Sans">
- *       <option value="inter">Inter</option>
- *     </optgroup>
- *   </Select>
- *
- * ⚠ ถ้าอยากได้ Radix Select (search, custom render, virtualized) ค่อย add
- *   เป็น component ตัวที่สอง — ใน MVP native พอ
+ * Group + Label:
+ *   <SelectContent>
+ *     <SelectGroup>
+ *       <SelectLabel>Sans</SelectLabel>
+ *       <SelectItem value="inter">Inter</SelectItem>
+ *     </SelectGroup>
+ *   </SelectContent>
  */
-export const Select = React.forwardRef<
-  HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement>
+
+export const Select = SelectPrimitive.Root
+export const SelectGroup = SelectPrimitive.Group
+export const SelectValue = SelectPrimitive.Value
+
+export const SelectTrigger = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
-  <select
+  <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      // font-sans บังคับ inherit body font — native <select> ใน Safari/
-      // บางเบราเซอร์ไม่ inherit font-family จาก parent (fallback เป็น
-      // system font) ต้องระบุชัดเจน
-      'flex h-9 w-full appearance-none rounded-md border border-input bg-transparent bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat px-3 pr-9 font-sans text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+      'flex h-9 w-full items-center justify-between gap-2 whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 font-sans text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
       className,
     )}
-    style={{
-      backgroundImage:
-        'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke-width=\'1.5\' stroke=\'currentColor\' opacity=\'0.5\'%3e%3cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'m19.5 8.25-7.5 7.5-7.5-7.5\'/%3e%3c/svg%3e")',
-    }}
     {...props}
   >
     {children}
-  </select>
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
 ))
-Select.displayName = 'Select'
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+export const SelectScrollUpButton = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.ScrollUpButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollUpButton
+    ref={ref}
+    className={cn('flex cursor-default items-center justify-center py-1', className)}
+    {...props}
+  >
+    <ChevronUp className="h-4 w-4" />
+  </SelectPrimitive.ScrollUpButton>
+))
+SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+
+export const SelectScrollDownButton = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.ScrollDownButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollDownButton
+    ref={ref}
+    className={cn('flex cursor-default items-center justify-center py-1', className)}
+    {...props}
+  >
+    <ChevronDown className="h-4 w-4" />
+  </SelectPrimitive.ScrollDownButton>
+))
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+
+export const SelectContent = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, position = 'popper', ...props }, ref) => (
+  <SelectPrimitive.Portal>
+    <SelectPrimitive.Content
+      ref={ref}
+      className={cn(
+        'relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-32 overflow-y-auto overflow-x-hidden rounded-md border bg-popover font-sans text-popover-foreground shadow-md',
+        position === 'popper' &&
+          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+        className,
+      )}
+      position={position}
+      {...props}
+    >
+      <SelectScrollUpButton />
+      <SelectPrimitive.Viewport
+        className={cn(
+          'p-1',
+          position === 'popper' &&
+            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
+        )}
+      >
+        {children}
+      </SelectPrimitive.Viewport>
+      <SelectScrollDownButton />
+    </SelectPrimitive.Content>
+  </SelectPrimitive.Portal>
+))
+SelectContent.displayName = SelectPrimitive.Content.displayName
+
+export const SelectLabel = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn('px-2 py-1.5 text-xs font-semibold text-muted-foreground', className)}
+    {...props}
+  />
+))
+SelectLabel.displayName = SelectPrimitive.Label.displayName
+
+export const SelectItem = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={cn(
+      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className,
+    )}
+    {...props}
+  >
+    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+))
+SelectItem.displayName = SelectPrimitive.Item.displayName
+
+export const SelectSeparator = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Separator
+    ref={ref}
+    className={cn('-mx-1 my-1 h-px bg-muted', className)}
+    {...props}
+  />
+))
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName
