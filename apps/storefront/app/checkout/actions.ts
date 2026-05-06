@@ -9,8 +9,9 @@ import {
   productVariants,
   products,
 } from '@pipecommerce/db/schema'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { createPaymentLink } from '@/lib/beam.ts'
 import { CART_COOKIE, getCartByToken } from '@/lib/cart.ts'
 import { db } from '@/lib/db.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
@@ -178,5 +179,21 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
   const store = await cookies()
   store.delete(CART_COOKIE)
 
-  redirect(`/orders/${orderNumber}?token=${trackingToken}`)
+  // Build payment link via Beam (stub mode = redirect to internal /pay page)
+  const headersList = await headers()
+  const host = headersList.get('host') ?? ''
+  const proto = headersList.get('x-forwarded-proto') ?? 'http'
+  const origin = `${proto}://${host}`
+
+  const paymentLink = await createPaymentLink({
+    amount: total,
+    currency: shop.currency,
+    reference: orderId!,
+    orderNumber,
+    description: `Order #${orderNumber} — ${shop.name}`,
+    returnUrl: `${origin}/orders/${orderNumber}?token=${trackingToken}`,
+    webhookUrl: `${origin}/api/webhooks/beam`,
+  })
+
+  redirect(paymentLink.url)
 }
