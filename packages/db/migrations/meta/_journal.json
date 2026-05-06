@@ -120,6 +120,20 @@
       "when": 1778003766033,
       "tag": "0016_content_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778045087288,
+      "tag": "0017_galleries",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778045125128,
+      "tag": "0018_galleries_rls",
+      "breakpoints": true
     }
   ]
 }

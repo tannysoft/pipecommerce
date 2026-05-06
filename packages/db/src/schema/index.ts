@@ -82,3 +82,7 @@ export * from './audit-logs.ts'
 export * from './articles.ts'
 export * from './article-images.ts'
 export * from './pages.ts'
+
+// Phase 4e — galleries
+export * from './galleries.ts'
+export * from './gallery-images.ts'
