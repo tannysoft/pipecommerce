@@ -28,7 +28,10 @@ export const Select = React.forwardRef<
   <select
     ref={ref}
     className={cn(
-      'flex h-9 w-full appearance-none rounded-md border border-input bg-transparent bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat px-3 pr-9 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+      // font-sans บังคับ inherit body font — native <select> ใน Safari/
+      // บางเบราเซอร์ไม่ inherit font-family จาก parent (fallback เป็น
+      // system font) ต้องระบุชัดเจน
+      'flex h-9 w-full appearance-none rounded-md border border-input bg-transparent bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat px-3 pr-9 font-sans text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
       className,
     )}
     style={{
