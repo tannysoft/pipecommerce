@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { deleteArticle, updateArticle } from '../actions.ts'
 
@@ -73,26 +73,24 @@ export function ArticleEditForm({
 
         <div className="space-y-2">
           <Label htmlFor="excerpt">Excerpt</Label>
-          <textarea
+          <Textarea
             id="excerpt"
             name="excerpt"
             rows={2}
             maxLength={300}
             disabled={pending}
             defaultValue={article.excerpt ?? ''}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="body">เนื้อหา</Label>
-          <textarea
+          <Textarea
             id="body"
             name="body"
             rows={14}
             disabled={pending}
             defaultValue={article.body ?? ''}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -168,14 +166,13 @@ export function ArticleEditForm({
             </div>
             <div className="space-y-1">
               <Label htmlFor="seoDescription">SEO Description</Label>
-              <textarea
+              <Textarea
                 id="seoDescription"
                 name="seoDescription"
                 rows={2}
                 maxLength={160}
                 disabled={pending}
                 defaultValue={article.seoDescription ?? ''}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
           </div>

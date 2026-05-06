@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { createPage } from '../actions.ts'
 
@@ -73,12 +73,11 @@ export function NewPageForm({ shopSlug }: { shopSlug: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="body">เนื้อหา</Label>
-        <textarea
+        <Textarea
           id="body"
           name="body"
           rows={10}
           disabled={pending}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="ใส่ข้อความ — รองรับ HTML basic"
         />
         <p className="text-xs text-muted-foreground">รองรับ HTML — rich-text editor มาทีหลัง</p>
@@ -113,13 +112,12 @@ export function NewPageForm({ shopSlug }: { shopSlug: string }) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="seoDescription">SEO Description</Label>
-            <textarea
+            <Textarea
               id="seoDescription"
               name="seoDescription"
               rows={2}
               maxLength={160}
               disabled={pending}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>

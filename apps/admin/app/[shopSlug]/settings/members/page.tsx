@@ -1,5 +1,5 @@
 import { sql } from '@pipecommerce/db'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Select } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
@@ -104,18 +104,17 @@ export default async function MembersPage({
                           action={changeMemberRole.bind(null, shopSlug, m.user_id)}
                           className="inline"
                         >
-                          <select
+                          <Select
                             name="role"
                             defaultValue={m.role}
                             onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                            className="h-7 rounded border border-input bg-transparent px-2 text-xs"
                           >
                             {ROLES.map((r) => (
                               <option key={r} value={r}>
                                 {r}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </form>
                       )}
                     </td>

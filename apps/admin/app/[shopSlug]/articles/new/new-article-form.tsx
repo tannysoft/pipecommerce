@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { createArticle } from '../actions.ts'
 
@@ -72,25 +72,23 @@ export function NewArticleForm({ shopSlug }: { shopSlug: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="excerpt">Excerpt (สรุปสั้นๆ)</Label>
-        <textarea
+        <Textarea
           id="excerpt"
           name="excerpt"
           rows={2}
           disabled={pending}
           maxLength={300}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
         <p className="text-xs text-muted-foreground">แสดงในหน้า list ของ blog</p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="body">เนื้อหา</Label>
-        <textarea
+        <Textarea
           id="body"
           name="body"
           rows={14}
           disabled={pending}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="เนื้อหาของบทความ — รองรับ HTML basic"
         />
       </div>
@@ -134,13 +132,12 @@ export function NewArticleForm({ shopSlug }: { shopSlug: string }) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="seoDescription">SEO Description</Label>
-            <textarea
+            <Textarea
               id="seoDescription"
               name="seoDescription"
               rows={2}
               maxLength={160}
               disabled={pending}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>

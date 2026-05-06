@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Label } from '@pipecommerce/ui'
+import { Button, Label, Select } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { groupedFontOptions } from '@/lib/fonts.ts'
 import { updateShopFonts } from './actions.ts'
@@ -19,12 +19,11 @@ function FontSelect({
   disabled?: boolean
 }) {
   return (
-    <select
+    <Select
       id={id}
       name={name}
       defaultValue={defaultValue}
       disabled={disabled}
-      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
     >
       {groups.map((g) => (
         <optgroup key={g.group} label={g.label}>
@@ -35,7 +34,7 @@ function FontSelect({
           ))}
         </optgroup>
       ))}
-    </select>
+    </Select>
   )
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Select, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { placeOrder } from './actions.ts'
 
@@ -116,28 +116,26 @@ export function CheckoutForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="country">ประเทศ</Label>
-            <select
+            <Select
               id="country"
               name="country"
               defaultValue="TH"
               disabled={pending}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
             >
               <option value="TH">ไทย</option>
-            </select>
+            </Select>
           </div>
         </div>
       </section>
 
       <section className="space-y-3 border-t pt-6">
         <Label htmlFor="note">หมายเหตุ (optional)</Label>
-        <textarea
+        <Textarea
           id="note"
           name="note"
           rows={2}
           disabled={pending}
           maxLength={500}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </section>
 

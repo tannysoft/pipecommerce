@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { deletePage, updatePage } from '../actions.ts'
 
@@ -64,13 +64,12 @@ export function PageEditForm({ shopSlug, page }: { shopSlug: string; page: Page 
 
         <div className="space-y-2">
           <Label htmlFor="body">เนื้อหา</Label>
-          <textarea
+          <Textarea
             id="body"
             name="body"
             rows={12}
             disabled={pending}
             defaultValue={page.body ?? ''}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -122,14 +121,13 @@ export function PageEditForm({ shopSlug, page }: { shopSlug: string; page: Page 
             </div>
             <div className="space-y-1">
               <Label htmlFor="seoDescription">SEO Description</Label>
-              <textarea
+              <Textarea
                 id="seoDescription"
                 name="seoDescription"
                 rows={2}
                 maxLength={160}
                 disabled={pending}
                 defaultValue={page.seoDescription ?? ''}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
           </div>

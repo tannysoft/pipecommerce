@@ -9,4 +9,6 @@ export {
   CardContent,
   CardFooter,
 } from './components/card.tsx'
+export { Select } from './components/select.tsx'
+export { Textarea } from './components/textarea.tsx'
 export { cn } from './lib/utils.ts'

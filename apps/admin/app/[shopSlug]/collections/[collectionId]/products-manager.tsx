@@ -1,4 +1,4 @@
-import { Button } from '@pipecommerce/ui'
+import { Button, Select } from '@pipecommerce/ui'
 import { addProductToCollection, removeProductFromCollection } from '../actions.ts'
 
 type Item = { id: string; title: string; handle: string }
@@ -61,7 +61,7 @@ export function CollectionProductsManager({
             action={addProductToCollection.bind(null, shopSlug, collectionId)}
             className="flex gap-2"
           >
-            <select
+            <Select
               name="productId"
               required
               className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -71,7 +71,7 @@ export function CollectionProductsManager({
                   {p.title}
                 </option>
               ))}
-            </select>
+            </Select>
             <Button type="submit">+ Add</Button>
           </form>
         )}

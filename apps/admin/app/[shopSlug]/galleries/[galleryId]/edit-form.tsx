@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { deleteGallery, updateGallery } from '../actions.ts'
 
@@ -60,13 +60,12 @@ export function GalleryEditForm({ shopSlug, gallery }: { shopSlug: string; galle
 
         <div className="space-y-2">
           <Label htmlFor="description">คำอธิบาย</Label>
-          <textarea
+          <Textarea
             id="description"
             name="description"
             rows={3}
             disabled={pending}
             defaultValue={gallery.description ?? ''}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -121,14 +120,13 @@ export function GalleryEditForm({ shopSlug, gallery }: { shopSlug: string; galle
             </div>
             <div className="space-y-1">
               <Label htmlFor="seoDescription">SEO Description</Label>
-              <textarea
+              <Textarea
                 id="seoDescription"
                 name="seoDescription"
                 rows={2}
                 maxLength={160}
                 disabled={pending}
                 defaultValue={gallery.seoDescription ?? ''}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
           </div>
