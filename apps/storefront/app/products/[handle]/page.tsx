@@ -1,11 +1,11 @@
 import { and, asc, eq, isNull } from '@pipecommerce/db'
 import { productImages, productVariants, products } from '@pipecommerce/db/schema'
-import { Button } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
+import { AddToCartButton } from './add-to-cart-button.tsx'
 
 const fmtBaht = (raw: string) =>
   Number(raw).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -121,9 +121,7 @@ export default async function ProductDetailPage({
             </div>
           ) : null}
 
-          <Button className="w-full" disabled>
-            เพิ่มลงตะกร้า (Phase ถัดไป)
-          </Button>
+          <AddToCartButton variantId={variants[0]?.id ?? ''} />
 
           {product.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 pt-2">

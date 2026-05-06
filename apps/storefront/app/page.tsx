@@ -118,9 +118,12 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="text-center">
+      <section className="flex justify-center gap-2">
         <Link href="/products">
           <Button variant="outline">เลือกซื้อสินค้าทั้งหมด</Button>
+        </Link>
+        <Link href="/cart">
+          <Button variant="ghost">ตะกร้า</Button>
         </Link>
       </section>
     </main>
