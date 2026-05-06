@@ -1,8 +1,26 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { sendMagicLink } from './actions.ts'
+
+const schema = z.object({
+  email: z.string().min(1, 'กรุณากรอกอีเมล').email('รูปแบบอีเมลไม่ถูกต้อง'),
+})
+
+type Values = z.infer<typeof schema>
 
 export function LoginForm({ next }: { next: string }) {
   const [pending, startTransition] = useTransition()
@@ -10,8 +28,16 @@ export function LoginForm({ next }: { next: string }) {
     null,
   )
 
-  function onSubmit(formData: FormData) {
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '' },
+  })
+
+  function onSubmit(values: Values) {
     startTransition(async () => {
+      const formData = new FormData()
+      formData.append('email', values.email)
+      formData.append('next', next)
       const res = await sendMagicLink(formData)
       setResult(res)
     })
@@ -27,26 +53,32 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
-      <input type="hidden" name="next" value={next} />
-      <div className="space-y-2">
-        <Label htmlFor="email">อีเมล</Label>
-        <Input
-          id="email"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
           name="email"
-          type="email"
-          autoComplete="email"
-          required
-          disabled={pending}
-          placeholder="you@example.com"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>อีเมล</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  disabled={pending}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      {result?.error ? (
-        <p className="text-sm text-destructive">{result.error}</p>
-      ) : null}
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? 'กำลังส่ง...' : 'ส่งลิงก์เข้าใช้งาน'}
-      </Button>
-    </form>
+        {result?.error ? <p className="text-sm text-destructive">{result.error}</p> : null}
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending ? 'กำลังส่ง...' : 'ส่งลิงก์เข้าใช้งาน'}
+        </Button>
+      </form>
+    </Form>
   )
 }
