@@ -8,6 +8,11 @@ const settingsLinks = [
     title: 'Typography',
     description: 'เลือก font ของ storefront — heading + body (Google Fonts ฟรี)',
   },
+  {
+    href: 'members',
+    title: 'Members',
+    description: 'เพิ่ม/ลบคนที่ช่วยจัดการร้าน + ตั้ง role',
+  },
 ]
 
 export default async function SettingsIndexPage({
