@@ -1,11 +1,18 @@
-import { and, asc, eq, isNull } from '@pipecommerce/db'
-import { productImages, productVariants, products } from '@pipecommerce/db/schema'
+import { and, asc, eq, isNull, sum } from '@pipecommerce/db'
+import {
+  inventoryItems,
+  productImages,
+  productOptions,
+  productVariants,
+  products,
+} from '@pipecommerce/db/schema'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 import { AddToCartButton } from './add-to-cart-button.tsx'
+import { VariantSelector } from './variant-selector.tsx'
 
 const fmtBaht = (raw: string) =>
   Number(raw).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -33,7 +40,7 @@ export default async function ProductDetailPage({
 
   if (!product) notFound()
 
-  const [variants, images] = await Promise.all([
+  const [variants, images, options, stocks] = await Promise.all([
     db
       .select()
       .from(productVariants)
@@ -48,7 +55,22 @@ export default async function ProductDetailPage({
       .from(productImages)
       .where(and(eq(productImages.productId, product.id), isNull(productImages.deletedAt)))
       .orderBy(asc(productImages.position), asc(productImages.createdAt)),
+    db
+      .select({ name: productOptions.name, values: productOptions.values })
+      .from(productOptions)
+      .where(eq(productOptions.productId, product.id))
+      .orderBy(asc(productOptions.position)),
+    db
+      .select({
+        variantId: inventoryItems.variantId,
+        total: sum(inventoryItems.available).mapWith(Number),
+      })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.shopId, shop.id))
+      .groupBy(inventoryItems.variantId),
   ])
+
+  const stockByVariant = new Map(stocks.map((s) => [s.variantId, s.total]))
 
   const minPrice = variants.length
     ? variants
@@ -96,7 +118,9 @@ export default async function ProductDetailPage({
 
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.title}</h1>
-          <p className="text-2xl font-semibold">฿{fmtBaht(minPrice.toFixed(2))}</p>
+          {options.length === 0 ? (
+            <p className="text-2xl font-semibold">฿{fmtBaht(minPrice.toFixed(2))}</p>
+          ) : null}
 
           {product.description ? (
             <div className="space-y-1">
@@ -107,21 +131,37 @@ export default async function ProductDetailPage({
             </div>
           ) : null}
 
-          {variants.length > 1 ? (
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium">เลือก variant</h2>
-              <ul className="space-y-1 text-sm">
-                {variants.map((v) => (
-                  <li key={v.id} className="flex justify-between border-b py-1">
-                    <span>{v.title}</span>
-                    <span className="font-mono">฿{fmtBaht(v.price)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <AddToCartButton variantId={variants[0]?.id ?? ''} />
+          {options.length > 0 ? (
+            <VariantSelector
+              options={options}
+              variants={variants.map((v) => ({
+                ...v,
+                stock: stockByVariant.has(v.id) ? stockByVariant.get(v.id) ?? 0 : null,
+              }))}
+            />
+          ) : (
+            <>
+              {(() => {
+                const v = variants[0]
+                const stock = v && stockByVariant.has(v.id) ? stockByVariant.get(v.id) ?? 0 : null
+                if (stock !== null && stock <= 0) {
+                  return (
+                    <p className="rounded-md border bg-muted px-3 py-2 text-center text-sm text-muted-foreground">
+                      สินค้าหมด
+                    </p>
+                  )
+                }
+                return (
+                  <>
+                    {stock !== null && stock <= 5 ? (
+                      <p className="text-xs text-orange-600">เหลือ {stock} ชิ้นเท่านั้น</p>
+                    ) : null}
+                    <AddToCartButton variantId={v?.id ?? ''} />
+                  </>
+                )
+              })()}
+            </>
+          )}
 
           {product.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 pt-2">

@@ -17,6 +17,7 @@ export default async function BlogIndexPage() {
       authorName: articles.authorName,
       publishedAt: articles.publishedAt,
       featuredImageId: articles.featuredImageId,
+      featuredImageUrl: articles.featuredImageUrl,
     })
     .from(articles)
     .where(
@@ -64,17 +65,19 @@ export default async function BlogIndexPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {list.map((a) => {
+            // Prefer URL-based → fallback legacy article_images
             const r2Key = a.featuredImageId ? imageMap.get(a.featuredImageId) : null
+            const imageUrl = a.featuredImageUrl ?? (r2Key ? publicImageUrl(r2Key) : null)
             return (
               <Link
                 key={a.id}
                 href={`/blog/${a.handle}`}
                 className="group space-y-3 rounded-xl border bg-card p-4 transition hover:shadow-md"
               >
-                {r2Key ? (
+                {imageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={publicImageUrl(r2Key)}
+                    src={imageUrl}
                     alt={a.title}
                     className="aspect-video w-full rounded-lg object-cover"
                   />

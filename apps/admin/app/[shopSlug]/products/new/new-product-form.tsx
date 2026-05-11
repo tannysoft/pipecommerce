@@ -19,6 +19,7 @@ import {
 import { useEffect, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { TagsInput } from '../../../_components/tags-input.tsx'
 import { createProduct } from '../actions.ts'
 
 function slugify(s: string) {
@@ -43,7 +44,7 @@ const schema = z.object({
     .regex(HANDLE_RE, 'ใช้ได้เฉพาะ a-z, 0-9, -'),
   price: z.coerce.number({ invalid_type_error: 'ต้องเป็นตัวเลข' }).min(0, 'ต้อง ≥ 0'),
   description: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.array(z.string()).max(20),
   status: z.enum(['draft', 'active'], { required_error: 'เลือก status' }),
 })
 
@@ -61,7 +62,7 @@ export function NewProductForm({ shopSlug }: { shopSlug: string }) {
       handle: '',
       price: 0,
       description: '',
-      tags: '',
+      tags: [],
       status: 'draft',
     },
   })
@@ -75,7 +76,9 @@ export function NewProductForm({ shopSlug }: { shopSlug: string }) {
     setServerError(null)
     startTransition(async () => {
       const formData = new FormData()
-      Object.entries(values).forEach(([k, v]) => formData.append(k, String(v ?? '')))
+      Object.entries(values).forEach(([k, v]) => {
+        formData.append(k, Array.isArray(v) ? v.join(',') : String(v ?? ''))
+      })
       const res = await createProduct(shopSlug, formData)
       if (!res.ok) setServerError(res.error)
     })
@@ -167,10 +170,14 @@ export function NewProductForm({ shopSlug }: { shopSlug: string }) {
             <FormItem>
               <FormLabel>Tags</FormLabel>
               <FormControl>
-                <Input disabled={pending} placeholder="summer, sale, new" {...field} />
+                <TagsInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={pending}
+                />
               </FormControl>
               <FormDescription>
-                คั่นด้วย comma · lowercase อัตโนมัติ · สูงสุด 20 tags
+                Enter หรือ , เพื่อเพิ่ม tag · lowercase อัตโนมัติ · สูงสุด 20 tags
               </FormDescription>
               <FormMessage />
             </FormItem>

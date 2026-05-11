@@ -2,6 +2,7 @@
 
 import { Button } from '@pipecommerce/ui'
 import { useRef, useState, useTransition } from 'react'
+import { ConfirmDialog } from '../../../_components/confirm-dialog.tsx'
 import { removeArticleFeaturedImage, uploadArticleFeaturedImage } from './image-actions.ts'
 
 export function FeaturedImageUploader({
@@ -35,7 +36,6 @@ export function FeaturedImageUploader({
   }
 
   function onRemove() {
-    if (!confirm('ลบ featured image?')) return
     startTransition(async () => {
       await removeArticleFeaturedImage(shopSlug, articleId)
     })
@@ -55,15 +55,16 @@ export function FeaturedImageUploader({
             <Button type="button" variant="outline" size="sm" onClick={onPick} disabled={pending}>
               {pending ? '...' : 'เปลี่ยนรูป'}
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={onRemove}
-              disabled={pending}
+            <ConfirmDialog
+              title="ลบ featured image?"
+              confirmLabel="ลบ"
+              pending={pending}
+              onConfirm={onRemove}
             >
-              ลบ
-            </Button>
+              <Button type="button" variant="destructive" size="sm" disabled={pending}>
+                ลบ
+              </Button>
+            </ConfirmDialog>
           </div>
         </div>
       ) : (

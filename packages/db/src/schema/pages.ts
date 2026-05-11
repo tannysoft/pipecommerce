@@ -23,6 +23,7 @@ export const pages = pgTable(
     title: text().notNull(),
     handle: text().notNull(),
     body: text(), // HTML
+    featuredImageUrl: text(), // R2 public URL — เก็บ URL ตรงๆ ไม่มี image table แยก
     templateSuffix: text(), // optional theme template variant
     status: text().notNull().default('draft'), // draft | active | archived
     seoTitle: text(),

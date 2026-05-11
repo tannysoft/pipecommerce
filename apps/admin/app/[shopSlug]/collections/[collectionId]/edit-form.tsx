@@ -1,7 +1,21 @@
 'use client'
 
-import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Textarea,
+} from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { ConfirmDialog } from '../../../_components/confirm-dialog.tsx'
 import { deleteCollection, updateCollection } from '../actions.ts'
 
 type Collection = {
@@ -10,6 +24,20 @@ type Collection = {
   handle: string
   description: string | null
 }
+
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+
+const schema = z.object({
+  title: z.string().min(1, 'กรุณากรอกชื่อ collection'),
+  handle: z
+    .string()
+    .min(1, 'กรุณากรอก handle')
+    .max(60, 'ยาวเกิน 60 ตัว')
+    .regex(HANDLE_RE, 'ใช้ได้เฉพาะ a-z, 0-9, -'),
+  description: z.string().optional(),
+})
+
+type Values = z.infer<typeof schema>
 
 export function CollectionEditForm({
   shopSlug,
@@ -20,21 +48,31 @@ export function CollectionEditForm({
 }) {
   const [pending, startTransition] = useTransition()
   const [deletePending, startDelete] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  function onSubmit(formData: FormData) {
-    setError(null)
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: collection.title,
+      handle: collection.handle,
+      description: collection.description ?? '',
+    },
+  })
+
+  function onSubmit(values: Values) {
+    setServerError(null)
     setSaved(false)
     startTransition(async () => {
+      const formData = new FormData()
+      Object.entries(values).forEach(([k, v]) => formData.append(k, String(v ?? '')))
       const res = await updateCollection(shopSlug, collection.id, formData)
-      if (!res.ok) setError(res.error)
+      if (!res.ok) setServerError(res.error)
       else setSaved(true)
     })
   }
 
   function onDelete() {
-    if (!confirm('ลบ collection นี้? สินค้าใน collection จะไม่ถูกลบ — แค่ unlink')) return
     startDelete(async () => {
       await deleteCollection(shopSlug, collection.id)
     })
@@ -42,55 +80,78 @@ export function CollectionEditForm({
 
   return (
     <div className="space-y-4">
-      <form action={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">ชื่อ Collection</Label>
-          <Input id="title" name="title" required disabled={pending} defaultValue={collection.title} />
-        </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ชื่อ Collection</FormLabel>
+                <FormControl>
+                  <Input disabled={pending} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="space-y-2">
-          <Label htmlFor="handle">URL handle</Label>
-          <Input
-            id="handle"
+          <FormField
+            control={form.control}
             name="handle"
-            required
-            disabled={pending}
-            defaultValue={collection.handle}
-            pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-            maxLength={60}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL handle</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={pending}
+                    pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+                    maxLength={60}
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">คำอธิบาย</Label>
-          <Textarea
-            id="description"
+          <FormField
+            control={form.control}
             name="description"
-            rows={3}
-            disabled={pending}
-            defaultValue={collection.description ?? ''}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>คำอธิบาย</FormLabel>
+                <FormControl>
+                  <Textarea rows={3} disabled={pending} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {saved ? <p className="text-sm text-green-600">บันทึกแล้ว ✓</p> : null}
+          {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
+          {saved ? <p className="text-sm text-green-600">บันทึกแล้ว ✓</p> : null}
 
-        <Button type="submit" disabled={pending}>
-          {pending ? 'กำลังบันทึก...' : 'บันทึก'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={pending}>
+            {pending ? 'กำลังบันทึก...' : 'บันทึก'}
+          </Button>
+        </form>
+      </Form>
 
       <div className="flex items-center justify-between border-t pt-4">
         <p className="text-sm text-muted-foreground">ลบ collection นี้</p>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          disabled={deletePending}
-          onClick={onDelete}
+        <ConfirmDialog
+          title="ลบ collection นี้?"
+          description="สินค้าใน collection จะไม่ถูกลบ — แค่ unlink ออกจาก collection"
+          confirmLabel="ลบ"
+          pending={deletePending}
+          onConfirm={onDelete}
         >
-          {deletePending ? '...' : 'Delete'}
-        </Button>
+          <Button type="button" variant="destructive" size="sm" disabled={deletePending}>
+            {deletePending ? '...' : 'Delete'}
+          </Button>
+        </ConfirmDialog>
       </div>
     </div>
   )

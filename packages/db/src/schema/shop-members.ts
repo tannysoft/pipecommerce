@@ -1,4 +1,5 @@
 import { jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { users } from './auth.ts'
 import { shops } from './shops.ts'
 
 export const shopMembers = pgTable(
@@ -7,7 +8,9 @@ export const shopMembers = pgTable(
     shopId: uuid()
       .notNull()
       .references(() => shops.id, { onDelete: 'cascade' }),
-    userId: uuid().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     role: text().notNull(), // owner | admin | staff | viewer
     permissions: jsonb().notNull().default({}),
     invitedAt: timestamp({ withTimezone: true }),

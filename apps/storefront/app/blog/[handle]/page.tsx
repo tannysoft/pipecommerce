@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
+import { sanitizeHtml } from '@/lib/html-sanitize.ts'
 import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
@@ -53,8 +54,9 @@ export default async function ArticleDetailPage({
   const article = await loadArticle(shop.id, handle)
   if (!article) notFound()
 
-  let featuredUrl: string | null = null
-  if (article.featuredImageId) {
+  // Prefer featuredImageUrl (new URL-based) → fallback featuredImageId (legacy article_images)
+  let featuredUrl: string | null = article.featuredImageUrl ?? null
+  if (!featuredUrl && article.featuredImageId) {
     const [img] = await db
       .select({ r2KeyOrig: articleImages.r2KeyOrig })
       .from(articleImages)
@@ -101,11 +103,10 @@ export default async function ArticleDetailPage({
         ) : null}
 
         {article.body ? (
-          // body = HTML จาก admin textarea — sanitize ตอนใส่ rich-text editor
-          // (admin = trusted shop owner, ไม่ใช่ user-generated)
+          // body = HTML จาก Tiptap editor — sanitize defense-in-depth
           <div
-            className="prose prose-sm max-w-none whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: article.body }}
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.body) }}
           />
         ) : (
           <p className="text-muted-foreground">บทความนี้ยังไม่มีเนื้อหา</p>

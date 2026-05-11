@@ -1,0 +1,19 @@
+name = "pipecommerce-r2-proxy"
+main = "worker.js"
+compatibility_date = "2025-04-01"
+
+# จับ files.pipecommerce.com — เจาะจงกว่า *.pipecommerce.com/*
+# ของ storefront worker → route specificity ทำให้ wildcard ของ storefront
+# ไม่จับ files.* อีกต่อไป
+routes = [
+  { pattern = "files.pipecommerce.com/*", zone_name = "pipecommerce.com" }
+]
+
+# R2 bucket binding — read object โดยตรง ไม่ต้อง public URL
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "pipecommerce"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

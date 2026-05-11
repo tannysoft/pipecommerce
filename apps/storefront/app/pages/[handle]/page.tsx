@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
+import { sanitizeHtml } from '@/lib/html-sanitize.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
 async function loadPage(shopId: string, handle: string) {
@@ -60,13 +61,20 @@ export default async function StaticPage({
       </Link>
 
       <article className="space-y-4">
+        {page.featuredImageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={page.featuredImageUrl}
+            alt={page.title}
+            className="aspect-video w-full rounded-xl border object-cover"
+          />
+        ) : null}
         <h1 className="text-3xl font-bold">{page.title}</h1>
         {page.body ? (
-          // body = HTML จาก admin — sanitization จะมาตอน rich-text editor (P2)
-          // ตอนนี้ admin = textarea, content เชื่อถือได้ (เพราะ shop owner เป็นคนใส่)
+          // body = HTML จาก Tiptap editor — sanitize defense-in-depth
           <div
-            className="prose prose-sm max-w-none whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: page.body }}
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.body) }}
           />
         ) : (
           <p className="text-muted-foreground">หน้านี้ยังไม่มีเนื้อหา</p>

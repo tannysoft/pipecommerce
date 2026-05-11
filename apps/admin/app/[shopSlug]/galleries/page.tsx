@@ -1,6 +1,19 @@
 import { and, count, desc, eq, isNull } from '@pipecommerce/db'
 import { galleries, galleryImages } from '@pipecommerce/db/schema'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
@@ -65,41 +78,41 @@ export default async function GalleriesListPage({
       </div>
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Title</th>
-              <th className="px-4 py-2 font-medium">Handle</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 text-right font-medium">Images</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Handle</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Images</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {list.map((g) => (
-              <tr key={g.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                <td className="px-4 py-2">
+              <TableRow key={g.id}>
+                <TableCell>
                   <Link
                     href={`/${shop.slug}/galleries/${g.id}`}
                     className="font-medium hover:underline"
                   >
                     {g.title}
                   </Link>
-                </td>
-                <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
                   /galleries/{g.handle}
-                </td>
-                <td className="px-4 py-2">
+                </TableCell>
+                <TableCell>
                   <span
                     className={`rounded px-2 py-0.5 text-xs ${STATUS_BADGE[g.status] ?? STATUS_BADGE.draft}`}
                   >
                     {g.status}
                   </span>
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums">{g.imageCount}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{g.imageCount}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )

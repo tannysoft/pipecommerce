@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@pipecommerce/ui'
 import { useRef, useState, useTransition } from 'react'
+import { ConfirmDialog } from '../../../_components/confirm-dialog.tsx'
 import { deleteProductImage, uploadProductImage } from './image-actions.ts'
 
 type Image = {
@@ -43,7 +43,6 @@ export function ImageUploader({
   }
 
   function onDelete(imageId: string) {
-    if (!confirm('ลบรูปนี้?')) return
     startTransition(async () => {
       await deleteProductImage(shopSlug, productId, imageId)
     })
@@ -60,14 +59,20 @@ export function ImageUploader({
               alt={img.alt ?? ''}
               className="aspect-square w-full rounded-lg border object-cover"
             />
-            <button
-              type="button"
-              onClick={() => onDelete(img.id)}
-              disabled={pending}
-              className="absolute right-1 top-1 rounded-md bg-background/90 px-2 py-0.5 text-xs opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+            <ConfirmDialog
+              title="ลบรูปนี้?"
+              confirmLabel="ลบ"
+              pending={pending}
+              onConfirm={() => onDelete(img.id)}
             >
-              ลบ
-            </button>
+              <button
+                type="button"
+                disabled={pending}
+                className="absolute right-1 top-1 rounded-md bg-background/90 px-2 py-0.5 text-xs opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+              >
+                ลบ
+              </button>
+            </ConfirmDialog>
           </div>
         ))}
 

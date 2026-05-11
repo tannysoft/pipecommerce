@@ -1,11 +1,30 @@
 'use server'
 
-import { and, eq } from '@pipecommerce/db'
-import { cartItems, productVariants, products } from '@pipecommerce/db/schema'
+import { and, eq, sum } from '@pipecommerce/db'
+import {
+  cartItems,
+  inventoryItems,
+  productVariants,
+  products,
+} from '@pipecommerce/db/schema'
 import { revalidatePath } from 'next/cache'
 import { getCartByToken, getOrCreateCart } from '@/lib/cart.ts'
 import { db } from '@/lib/db.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
+
+/**
+ * Total available stock สำหรับ variant (sum across locations)
+ * Returns null ถ้าไม่ track inventory (ขายได้เสมอ)
+ */
+async function getVariantStock(variantId: string): Promise<number | null> {
+  const rows = await db
+    .select({ total: sum(inventoryItems.available).mapWith(Number) })
+    .from(inventoryItems)
+    .where(eq(inventoryItems.variantId, variantId))
+  if (rows.length === 0) return null
+  const total = rows[0]?.total
+  return typeof total === 'number' ? total : null
+}
 
 const MAX_QTY = 99
 
@@ -42,14 +61,22 @@ export async function addToCart(formData: FormData): Promise<CartActionResult> {
     .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.variantId, variantId)))
     .limit(1)
 
+  const stock = await getVariantStock(variantId)
+  const desiredQty = existingLine
+    ? Math.min(MAX_QTY, existingLine.qty + qty)
+    : Math.min(MAX_QTY, qty)
+  if (stock !== null && desiredQty > stock) {
+    if (stock <= 0) return { ok: false, error: 'สินค้าหมด' }
+    return { ok: false, error: `เหลือเพียง ${stock} ชิ้น` }
+  }
+
   if (existingLine) {
-    const newQty = Math.min(MAX_QTY, existingLine.qty + qty)
     await db
       .update(cartItems)
-      .set({ quantity: newQty })
+      .set({ quantity: desiredQty })
       .where(eq(cartItems.id, existingLine.id))
   } else {
-    await db.insert(cartItems).values({ cartId: cart.id, variantId, quantity: qty })
+    await db.insert(cartItems).values({ cartId: cart.id, variantId, quantity: desiredQty })
   }
 
   revalidatePath('/cart')
@@ -76,6 +103,23 @@ export async function updateCartItemQty(
     await db.delete(cartItems).where(eq(cartItems.id, item.id))
   } else {
     const clamped = Math.min(MAX_QTY, qty)
+
+    // Stock check ตอน update qty ด้วย (เผื่อ stock ลดหลัง add)
+    const [line] = await db
+      .select({ variantId: cartItems.variantId })
+      .from(cartItems)
+      .where(eq(cartItems.id, item.id))
+      .limit(1)
+    if (line) {
+      const stock = await getVariantStock(line.variantId)
+      if (stock !== null && clamped > stock) {
+        return {
+          ok: false,
+          error: stock <= 0 ? 'สินค้าหมด' : `เหลือเพียง ${stock} ชิ้น`,
+        }
+      }
+    }
+
     await db.update(cartItems).set({ quantity: clamped }).where(eq(cartItems.id, item.id))
   }
 

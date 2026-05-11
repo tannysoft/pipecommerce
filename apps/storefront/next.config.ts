@@ -1,19 +1,18 @@
+import path from 'node:path'
 import type { NextConfig } from 'next'
+
+const workspaceRoot = path.resolve(process.cwd(), '..', '..')
 
 const config: NextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
+  turbopack: {
+    root: workspaceRoot,
+  },
+  outputFileTracingRoot: workspaceRoot,
   images: {
-    // เราเสิร์ฟรูปจาก R2 (cdn.yourapp.com) ตรงๆ — ไม่ใช้ Next image optimization
     unoptimized: true,
   },
-  experimental: {
-    // ใส่เมื่อจำเป็น
-  },
-  // OpenNext จะ handle output แบบ Cloudflare Workers — ไม่ต้องตั้ง output: 'standalone'
 }
-
-// ตอน dev บน Workers runtime: เรียก initOpenNextCloudflareForDev จาก @opennextjs/cloudflare
-// import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
-// initOpenNextCloudflareForDev()
 
 export default config

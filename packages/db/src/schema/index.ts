@@ -1,6 +1,9 @@
 // Re-export every schema module so Drizzle picks up all tables.
 // See docs/SCHEMA.md for the full list — added in sub-phases (2a, 2b, ...).
 
+// Auth.js v5 (admin authentication) — replaces Supabase auth.users
+export * from './auth.ts'
+
 // Phase 1 — tenant + identity foundation
 export * from './shops.ts'
 export * from './shop-domains.ts'

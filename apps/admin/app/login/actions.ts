@@ -1,7 +1,6 @@
 'use server'
 
-import { createServerClient } from '@pipecommerce/auth/admin/server'
-import { headers } from 'next/headers'
+import { signIn } from '@/auth.ts'
 
 export async function sendMagicLink(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
@@ -11,20 +10,17 @@ export async function sendMagicLink(formData: FormData) {
     return { ok: false, error: 'กรุณากรอกอีเมลที่ถูกต้อง' }
   }
 
-  const supabase = await createServerClient()
-  const headersList = await headers()
-  const origin = headersList.get('origin') ?? `http://${headersList.get('host')}`
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      shouldCreateUser: true,
-    },
-  })
-
-  if (error) {
-    return { ok: false, error: error.message }
+  try {
+    await signIn('resend', {
+      email,
+      redirectTo: next,
+      redirect: false,
+    })
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'ส่งลิงก์ไม่สำเร็จ',
+    }
   }
 
   return { ok: true, email }

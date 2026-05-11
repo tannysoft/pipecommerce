@@ -1,9 +1,12 @@
 'use server'
 
-import { and, count, eq, sql } from '@pipecommerce/db'
+import { and, count, eq, isNull, or, sql } from '@pipecommerce/db'
 import {
   cartItems,
   carts,
+  discounts,
+  inventoryItems,
+  orderDiscountApplications,
   orderLineItems,
   orders,
   productVariants,
@@ -14,6 +17,7 @@ import { redirect } from 'next/navigation'
 import { createPaymentLink } from '@/lib/beam.ts'
 import { CART_COOKIE, getCartByToken } from '@/lib/cart.ts'
 import { db } from '@/lib/db.ts'
+import { sendOrderConfirmation } from '@/lib/email.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
 export type CheckoutResult = { ok: true } | { ok: false; error: string }
@@ -39,6 +43,9 @@ function readForm(formData: FormData) {
     postalCode: String(formData.get('postalCode') ?? '').trim(),
     country: String(formData.get('country') ?? 'TH').trim() || 'TH',
     note: String(formData.get('note') ?? '').trim() || null,
+    discountCode: String(formData.get('discountCode') ?? '')
+      .trim()
+      .toUpperCase() || null,
   }
 }
 
@@ -84,12 +91,100 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
 
   if (lines.length === 0) return { ok: false, error: 'ตะกร้าว่าง' }
 
-  // Compute totals — MVP: ไม่คิดภาษี ไม่คิดค่าส่ง (จะมาใน phase ถัดไป)
   const subtotal = lines.reduce((s, l) => s + Number(l.variantPrice) * l.quantity, 0)
-  const totalTax = 0
-  const totalShipping = 0
-  const totalDiscounts = 0
-  const total = subtotal + totalTax + totalShipping - totalDiscounts
+
+  // Resolve discount code (if any)
+  let appliedDiscount: {
+    id: string
+    code: string | null
+    type: string
+    value: number
+    amountApplied: number
+    freeShipping: boolean
+  } | null = null
+
+  if (input.discountCode) {
+    const now = new Date()
+    const [d] = await db
+      .select()
+      .from(discounts)
+      .where(
+        and(
+          eq(discounts.shopId, shop.id),
+          eq(discounts.code, input.discountCode),
+          eq(discounts.status, 'active'),
+        ),
+      )
+      .limit(1)
+
+    if (!d) return { ok: false, error: 'รหัสส่วนลดไม่ถูกต้อง' }
+    if (d.startsAt && d.startsAt > now)
+      return { ok: false, error: 'รหัสส่วนลดยังไม่เริ่มใช้' }
+    if (d.endsAt && d.endsAt < now) return { ok: false, error: 'รหัสส่วนลดหมดอายุแล้ว' }
+    if (d.usageLimit !== null && d.usedCount >= d.usageLimit)
+      return { ok: false, error: 'รหัสส่วนลดถูกใช้ครบแล้ว' }
+    if (d.minimumAmount && subtotal < Number(d.minimumAmount))
+      return {
+        ok: false,
+        error: `ต้องสั่งซื้อขั้นต่ำ ฿${Number(d.minimumAmount).toLocaleString('th-TH')}`,
+      }
+
+    let amount = 0
+    let freeShipping = false
+    if (d.type === 'percentage' && d.value) {
+      amount = (subtotal * Number(d.value)) / 100
+    } else if (d.type === 'fixed_amount' && d.value) {
+      amount = Math.min(Number(d.value), subtotal)
+    } else if (d.type === 'free_shipping') {
+      freeShipping = true
+    }
+
+    appliedDiscount = {
+      id: d.id,
+      code: d.code,
+      type: d.type,
+      value: Number(d.value ?? 0),
+      amountApplied: amount,
+      freeShipping,
+    }
+  }
+
+  const totalDiscounts = appliedDiscount?.amountApplied ?? 0
+
+  const shippingConfig = (shop.settings?.shipping ?? {}) as {
+    defaultRate?: number
+    freeThreshold?: number | null
+  }
+  const baseRate =
+    typeof shippingConfig.defaultRate === 'number' ? shippingConfig.defaultRate : 0
+  const threshold =
+    typeof shippingConfig.freeThreshold === 'number' ? shippingConfig.freeThreshold : null
+  const totalShipping = appliedDiscount?.freeShipping
+    ? 0
+    : threshold !== null && subtotal >= threshold
+      ? 0
+      : baseRate
+
+  const taxConfig = (shop.settings?.tax ?? {}) as {
+    mode?: 'none' | 'inclusive_customer' | 'exclusive_customer' | 'shop_absorbs'
+    rate?: number
+  }
+  const taxMode = taxConfig.mode ?? 'none'
+  const taxRate =
+    typeof taxConfig.rate === 'number' && taxConfig.rate >= 0 ? taxConfig.rate : 0
+
+  // Tax base = subtotal หลังหัก discount
+  const taxableBase = subtotal - totalDiscounts
+  let totalTax = 0
+  let total = taxableBase + totalShipping
+  if (taxMode === 'exclusive_customer' && taxRate > 0) {
+    totalTax = taxableBase * taxRate
+    total = taxableBase + totalTax + totalShipping
+  } else if (taxMode === 'inclusive_customer' && taxRate > 0) {
+    totalTax = taxableBase - taxableBase / (1 + taxRate)
+    total = taxableBase + totalShipping
+  }
+  // shop_absorbs และ none: totalTax = 0 ในใบเสร็จลูกค้า
 
   const shippingAddress = {
     firstName: input.firstName,
@@ -151,6 +246,48 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
           })),
         )
 
+        // Atomic stock decrement — block oversell ผ่าน WHERE available >= qty
+        // ถ้า variant ไม่ track inventory จะไม่มี row → update affected = 0 → ข้าม
+        // ถ้า track + ของเหลือไม่พอ → update returns 0 → throw → rollback
+        for (const line of lines) {
+          const updated = await tx
+            .update(inventoryItems)
+            .set({ available: sql`${inventoryItems.available} - ${line.quantity}` })
+            .where(
+              and(
+                eq(inventoryItems.variantId, line.variantId),
+                sql`${inventoryItems.available} >= ${line.quantity}`,
+              ),
+            )
+            .returning({ id: inventoryItems.id })
+
+          // Check if variant is tracked (has any inventory row)
+          const tracked = await tx
+            .select({ id: inventoryItems.id })
+            .from(inventoryItems)
+            .where(eq(inventoryItems.variantId, line.variantId))
+            .limit(1)
+
+          if (tracked.length > 0 && updated.length === 0) {
+            throw new Error(`OUT_OF_STOCK:${line.variantTitle ?? line.productTitle}`)
+          }
+        }
+
+        if (appliedDiscount) {
+          await tx.insert(orderDiscountApplications).values({
+            orderId: order.id,
+            discountId: appliedDiscount.id,
+            code: appliedDiscount.code,
+            type: appliedDiscount.type,
+            value: appliedDiscount.value.toFixed(2),
+            amountApplied: appliedDiscount.amountApplied.toFixed(2),
+          })
+          await tx
+            .update(discounts)
+            .set({ usedCount: sql`${discounts.usedCount} + 1` })
+            .where(eq(discounts.id, appliedDiscount.id))
+        }
+
         // Empty cart — soft expire (ตรงนี้ ลบ items + mark cart expired)
         await tx.delete(cartItems).where(eq(cartItems.cartId, cart.id))
         await tx
@@ -166,6 +303,11 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
       trackingToken = token
       break
     } catch (error) {
+      const message = (error as { message?: string })?.message ?? ''
+      if (message.startsWith('OUT_OF_STOCK:')) {
+        const item = message.slice('OUT_OF_STOCK:'.length)
+        return { ok: false, error: `สินค้าหมด: ${item}` }
+      }
       // 23505 = unique violation (order_number ซ้ำ) → retry
       if ((error as { code?: string })?.code !== '23505') throw error
     }
@@ -184,6 +326,32 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
   const host = headersList.get('host') ?? ''
   const proto = headersList.get('x-forwarded-proto') ?? 'http'
   const origin = `${proto}://${host}`
+  const trackingUrl = `${origin}/orders/${orderNumber}?token=${trackingToken}`
+
+  // Order confirmation email — fire-and-forget (don't block checkout if email fails)
+  try {
+    await sendOrderConfirmation({
+      to: input.email,
+      shop: { name: shop.name, currency: shop.currency },
+      order: {
+        orderNumber,
+        subtotalPrice: subtotal,
+        totalDiscounts,
+        totalShipping,
+        totalTax,
+        totalPrice: total,
+      },
+      lines: lines.map((l) => ({
+        productTitle: l.productTitle,
+        variantTitle: l.variantTitle,
+        quantity: l.quantity,
+        price: l.variantPrice,
+      })),
+      trackingUrl,
+    })
+  } catch (error) {
+    console.error('[checkout] order confirmation email failed', error)
+  }
 
   const paymentLink = await createPaymentLink({
     amount: total,
@@ -191,7 +359,7 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
     reference: orderId!,
     orderNumber,
     description: `Order #${orderNumber} — ${shop.name}`,
-    returnUrl: `${origin}/orders/${orderNumber}?token=${trackingToken}`,
+    returnUrl: trackingUrl,
     webhookUrl: `${origin}/api/webhooks/beam`,
   })
 

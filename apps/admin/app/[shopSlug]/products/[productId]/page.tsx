@@ -1,5 +1,11 @@
-import { and, asc, eq, isNull } from '@pipecommerce/db'
-import { productImages, productVariants, products } from '@pipecommerce/db/schema'
+import { and, asc, eq, isNull, sum } from '@pipecommerce/db'
+import {
+  inventoryItems,
+  productImages,
+  productOptions,
+  productVariants,
+  products,
+} from '@pipecommerce/db/schema'
 import { Card, CardContent, CardHeader, CardTitle } from '@pipecommerce/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -8,6 +14,7 @@ import { publicImageUrl } from '@/lib/r2.ts'
 import { requireShop } from '@/lib/shop.ts'
 import { ProductEditForm } from './edit-form.tsx'
 import { ImageUploader } from './image-uploader.tsx'
+import { VariantsManager } from './variants-manager.tsx'
 
 export default async function ProductDetailPage({
   params,
@@ -25,11 +32,41 @@ export default async function ProductDetailPage({
 
   if (!product) notFound()
 
-  const [variant] = await db
-    .select({ price: productVariants.price })
+  const variants = await db
+    .select({
+      id: productVariants.id,
+      title: productVariants.title,
+      option1: productVariants.option1,
+      option2: productVariants.option2,
+      option3: productVariants.option3,
+      price: productVariants.price,
+      sku: productVariants.sku,
+    })
     .from(productVariants)
     .where(eq(productVariants.productId, product.id))
-    .limit(1)
+    .orderBy(asc(productVariants.position))
+
+  const options = await db
+    .select({
+      name: productOptions.name,
+      values: productOptions.values,
+      position: productOptions.position,
+    })
+    .from(productOptions)
+    .where(eq(productOptions.productId, product.id))
+    .orderBy(asc(productOptions.position))
+
+  const stocks = await db
+    .select({
+      variantId: inventoryItems.variantId,
+      total: sum(inventoryItems.available).mapWith(Number),
+    })
+    .from(inventoryItems)
+    .where(eq(inventoryItems.shopId, shop.id))
+    .groupBy(inventoryItems.variantId)
+  const stockByVariant = new Map(stocks.map((s) => [s.variantId, s.total]))
+
+  const variant = variants[0]
 
   const images = await db
     .select({
@@ -85,6 +122,23 @@ export default async function ProductDetailPage({
               tags: product.tags ?? [],
             }}
             price={variant?.price ?? null}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>ตัวเลือก + Variants</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VariantsManager
+            shopSlug={shopSlug}
+            productId={product.id}
+            options={options.map((o) => ({ name: o.name, values: o.values }))}
+            variants={variants.map((v) => ({
+              ...v,
+              stock: stockByVariant.has(v.id) ? stockByVariant.get(v.id) ?? 0 : null,
+            }))}
           />
         </CardContent>
       </Card>

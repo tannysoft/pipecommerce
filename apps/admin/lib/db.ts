@@ -1,24 +1,23 @@
 import { createDb, type Db } from '@pipecommerce/db'
 
 /**
- * Drizzle DB client สำหรับ admin app (server-side เท่านั้น)
+ * Drizzle DB client สำหรับ admin app (server-side)
  *
- * Dev (next dev): module-level singleton + globalThis cache เพื่อไม่ให้
- *   hot-reload สร้าง connection ใหม่ทุกครั้ง (connection leak)
+ * รัน Next.js บน Railway → Postgres ผ่าน DATABASE_URL ตรงๆ
  *
- * Production บน CF Workers: ผ่าน Hyperdrive (binding) — สร้าง client
- *   per-request ผ่าน env.HYPERDRIVE.connectionString — pattern เดียวกับ
- *   storefront. ตอนนี้ admin run ผ่าน next dev → ใช้ DATABASE_URL ตรง
- *
- * ห้าม import จาก client component — ตัว postgres-js ไม่ทำงานบน browser
+ * Eager singleton — @auth/drizzle-adapter ตรวจ dialect ผ่าน Drizzle's `is()`
+ * brand check ที่ต้องการ instance จริงๆ ไม่ใช่ Proxy. postgres-js เปิด connection
+ * แบบ lazy อยู่แล้ว — สร้าง client ตอน module load ไม่เปิด socket
  */
 declare global {
   // eslint-disable-next-line no-var
   var _pcAdminDb: Db | undefined
 }
 
-const url = process.env.DATABASE_URL
-if (!url) throw new Error('DATABASE_URL is required')
+function init(): Db {
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('DATABASE_URL is not set')
+  return createDb(url)
+}
 
-export const db: Db = globalThis._pcAdminDb ?? createDb(url)
-if (process.env.NODE_ENV !== 'production') globalThis._pcAdminDb = db
+export const db: Db = globalThis._pcAdminDb ?? (globalThis._pcAdminDb = init())

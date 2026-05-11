@@ -16,7 +16,16 @@ const SUBDOMAIN_SUFFIXES = [`.${PLATFORM_DOMAIN}`, '.localhost']
 
 export type ShopSettings = {
   fonts?: { heading?: string; body?: string }
-  // อื่นๆ ที่จะเพิ่มภายหลัง — tax, seo, robots_txt, ฯลฯ
+  tax?: {
+    mode?: 'none' | 'inclusive_customer' | 'exclusive_customer' | 'shop_absorbs'
+    rate?: number
+    label?: string
+  }
+  shipping?: {
+    defaultRate?: number
+    freeThreshold?: number | null
+  }
+  // อื่นๆ ที่จะเพิ่มภายหลัง — seo, robots_txt, ฯลฯ
   [k: string]: unknown
 }
 
@@ -90,6 +99,23 @@ export const lookupShopByHost = cache(
 )
 
 /**
+ * อ่าน host จาก request — ใช้ x-shop-host ถ้ามี (proxy set) มิเช่นนั้น fallback host
+ * Reserved subdomain (admin., console.) + platform apex/www → คืน null
+ *
+ * (Next 16 + OpenNext ไม่รองรับ proxy/middleware ที่ set header — ต้องอ่าน
+ * host header โดยตรงและ filter ใน server component)
+ */
+export async function resolveShopHost(): Promise<string | null> {
+  const h = await headers()
+  const raw = (h.get('x-shop-host') ?? h.get('host') ?? '').toLowerCase()
+  const host = raw.replace(/:\d+$/, '')
+  if (!host) return null
+  if (host === PLATFORM_DOMAIN || host === `www.${PLATFORM_DOMAIN}`) return null
+  if (host.startsWith('admin.') || host.startsWith('console.')) return null
+  return host
+}
+
+/**
  * Variant ของ lookupShopByHost ที่บังคับว่าต้องเจอ shop —
  * notFound() ถ้าไม่เจอ. ใช้ใน /products/[handle], /collections/[handle], etc.
  *
@@ -97,8 +123,7 @@ export const lookupShopByHost = cache(
  * แทนที่จะ 404 เมื่อ host ไม่ใช่ shop
  */
 export async function requireShopFromHost(): Promise<StorefrontShop> {
-  const h = await headers()
-  const host = h.get('x-shop-host') ?? ''
+  const host = await resolveShopHost()
   if (!host) notFound()
   const shop = await lookupShopByHost(host)
   if (!shop) notFound()

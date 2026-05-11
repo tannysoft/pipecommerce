@@ -19,6 +19,7 @@ function readForm(formData: FormData) {
     status: String(formData.get('status') ?? 'draft'),
     seoTitle: String(formData.get('seoTitle') ?? '').trim() || null,
     seoDescription: String(formData.get('seoDescription') ?? '').trim() || null,
+    featuredImageUrl: String(formData.get('featuredImageUrl') ?? '').trim() || null,
   }
 }
 
@@ -54,6 +55,7 @@ export async function createPage(shopSlug: string, formData: FormData): Promise<
         status: input.status,
         seoTitle: input.seoTitle,
         seoDescription: input.seoDescription,
+        featuredImageUrl: input.featuredImageUrl,
         publishedAt: input.status === 'active' ? new Date() : null,
       })
       .returning({ id: pages.id })

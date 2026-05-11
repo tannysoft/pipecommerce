@@ -37,6 +37,36 @@ export default async function CheckoutPage() {
     0,
   )
 
+  const taxConfig = (shop.settings?.tax ?? {}) as {
+    mode?: 'none' | 'inclusive_customer' | 'exclusive_customer' | 'shop_absorbs'
+    rate?: number
+    label?: string
+  }
+  const taxMode = taxConfig.mode ?? 'none'
+  const taxRate =
+    typeof taxConfig.rate === 'number' && taxConfig.rate >= 0 ? taxConfig.rate : 0
+  const taxLabel = taxConfig.label ?? 'VAT'
+
+  const shippingConfig = (shop.settings?.shipping ?? {}) as {
+    defaultRate?: number
+    freeThreshold?: number | null
+  }
+  const shippingBase =
+    typeof shippingConfig.defaultRate === 'number' ? shippingConfig.defaultRate : 0
+  const shippingThreshold =
+    typeof shippingConfig.freeThreshold === 'number' ? shippingConfig.freeThreshold : null
+  const shippingAmount =
+    shippingThreshold !== null && subtotal >= shippingThreshold ? 0 : shippingBase
+
+  let taxAmount = 0
+  let total = subtotal + shippingAmount
+  if (taxMode === 'exclusive_customer' && taxRate > 0) {
+    taxAmount = subtotal * taxRate
+    total = subtotal + taxAmount + shippingAmount
+  } else if (taxMode === 'inclusive_customer' && taxRate > 0) {
+    taxAmount = subtotal - subtotal / (1 + taxRate)
+  }
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <header>
@@ -74,15 +104,24 @@ export default async function CheckoutPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">ค่าส่ง</dt>
-              <dd className="text-xs text-muted-foreground">ฟรี (MVP)</dd>
+              <dd className="font-mono">
+                {shippingAmount > 0 ? `฿${fmtBaht(shippingAmount)}` : 'ฟรี'}
+              </dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">VAT</dt>
-              <dd className="text-xs text-muted-foreground">ยังไม่คิด (MVP)</dd>
-            </div>
+            {taxMode === 'exclusive_customer' && taxRate > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">{taxLabel}</dt>
+                <dd className="font-mono">฿{fmtBaht(taxAmount)}</dd>
+              </div>
+            ) : taxMode === 'inclusive_customer' && taxRate > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">{taxLabel} (รวมในราคาแล้ว)</dt>
+                <dd className="font-mono text-xs text-muted-foreground">฿{fmtBaht(taxAmount)}</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between border-t pt-2 text-base">
               <dt className="font-medium">Total</dt>
-              <dd className="font-mono font-semibold">฿{fmtBaht(subtotal)}</dd>
+              <dd className="font-mono font-semibold">฿{fmtBaht(total)}</dd>
             </div>
           </dl>
           <p className="mt-3 text-xs text-muted-foreground">

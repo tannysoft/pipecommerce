@@ -2,8 +2,10 @@
 
 import { and, eq } from '@pipecommerce/db'
 import { orders, payments } from '@pipecommerce/db/schema'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db.ts'
+import { sendPaymentReceipt } from '@/lib/email.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 
 /**
@@ -27,7 +29,12 @@ export async function simulatePayment(
     .select({
       id: orders.id,
       orderNumber: orders.orderNumber,
+      email: orders.email,
       totalPrice: orders.totalPrice,
+      subtotalPrice: orders.subtotalPrice,
+      totalShipping: orders.totalShipping,
+      totalTax: orders.totalTax,
+      totalDiscounts: orders.totalDiscounts,
       currentStatus: orders.financialStatus,
     })
     .from(orders)
@@ -61,6 +68,31 @@ export async function simulatePayment(
       paidAt: new Date(),
     })
   })
+
+  // Receipt email — fire-and-forget
+  if (order.email) {
+    try {
+      const headersList = await headers()
+      const host = headersList.get('host') ?? ''
+      const proto = headersList.get('x-forwarded-proto') ?? 'http'
+      const trackingUrl = `${proto}://${host}/orders/${order.orderNumber}?token=${trackingToken}`
+      await sendPaymentReceipt({
+        to: order.email,
+        shop: { name: shop.name, currency: shop.currency },
+        order: {
+          orderNumber: order.orderNumber,
+          subtotalPrice: order.subtotalPrice,
+          totalDiscounts: order.totalDiscounts,
+          totalShipping: order.totalShipping,
+          totalTax: order.totalTax,
+          totalPrice: order.totalPrice,
+        },
+        trackingUrl,
+      })
+    } catch (error) {
+      console.error('[pay] receipt email failed', error)
+    }
+  }
 
   redirect(`/orders/${order.orderNumber}?token=${trackingToken}`)
 }

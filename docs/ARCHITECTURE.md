@@ -1,7 +1,8 @@
 # Architecture
 
-> Last updated: 2026-05-05
-> Status: Design phase, no code yet
+> Last updated: 2026-05-11
+> Status: MVP implementation phase. Migrated off Cloudflare Workers → Railway
+> in 2026-05 (see [DECISIONS.md](DECISIONS.md) ADR-2026-05-11).
 
 ## Vision
 
@@ -19,27 +20,25 @@ PipeCommerce เป็น SaaS e-commerce platform แบบ Shopify-like สำ
 
 | Layer | Tool | หมายเหตุ |
 |---|---|---|
-| Framework | **Next.js 16** (App Router) | RSC, ISR, edge-compatible |
-| Hosting | **Cloudflare Workers** ผ่าน `@opennextjs/cloudflare` | NOT Vercel |
-| DB Pool | **Cloudflare Hyperdrive** → Supabase | จำเป็นสำหรับ Workers ต่อ Postgres |
-| Database | **Supabase Postgres** + RLS + Vault | Vault เก็บ Beam API key per shop |
-| ORM | **Drizzle** + `postgres-js` | edge-compatible, prepare:false |
-| Storage | **Cloudflare R2** | egress ฟรี — เก็บทั้ง original + resized variants |
-| Image transform | **Cloudflare Image Resizing** | ใช้แค่ transform engine, ไม่ใช่ CDN |
-| Custom domain | **Cloudflare for SaaS** (Custom Hostnames API) | issue SSL อัตโนมัติ |
-| Auth (admin/staff) | **Supabase Auth** | magic link / OAuth |
+| Framework | **Next.js 16** (App Router) | RSC, ISR, Node runtime |
+| Hosting | **Railway** (Node + Nixpacks) | NOT Vercel, NOT CF Workers anymore |
+| Database | **Railway Postgres** | private network → app services |
+| ORM | **Drizzle** + `postgres-js` | runs on Node — no edge constraint |
+| Storage | **Cloudflare R2** (S3 API) | egress ฟรี — original + resized variants |
+| Image serve | `files.pipecommerce.com` → **r2-proxy worker** → R2 | apps/r2-proxy is the only CF Worker left |
+| Custom domain | **Cloudflare for SaaS** (Custom Hostnames) → CNAME → Railway | SSL issued by Railway / Let's Encrypt |
+| Auth (admin/staff) | **Auth.js v5 (NextAuth)** + Drizzle adapter + Resend magic link | database session strategy |
 | Auth (storefront customer) | custom JWT + table `customers` | แยกจาก admin auth |
 | Payment | **Beamcheckout** (Hosted Payment Links + Webhook) | per-shop merchant account |
-| Queue | **Cloudflare Queues** | webhook delivery, email, image process |
-| Cron | **Cloudflare Cron Triggers** | abandoned cart, recurring billing |
-| Cache/KV | **Cloudflare KV** | shop-by-domain lookup, session |
-| Email | **Resend** + **React Email** | transactional |
-| Validation | **Zod** | edge-compatible |
+| Queue | **pg-boss** (Postgres-backed) | replaces CF Queues — runs in admin worker |
+| Cron | **Railway Cron** | replaces CF Cron Triggers |
+| Cache | in-memory + Postgres | replaces CF KV (shop-by-domain table + cache headers) |
+| Email | **Resend** + **React Email** | transactional + Auth.js magic link |
+| Validation | **Zod** | |
 | UI | **shadcn/ui** + **Tailwind 4** | |
 | Forms | **React Hook Form** + Zod | |
-| Server state | **TanStack Query** | |
-| Error tracking | **Sentry** (Workers SDK) | |
-| Logging | **Cloudflare Logpush** → R2 | |
+| Error tracking | **Sentry** (Node SDK) | |
+| Logging | Railway built-in log drain | |
 | Tests | **Vitest** + **Playwright** + **pgTAP** (RLS tests) | |
 | Migration | **drizzle-kit** | |
 | Package manager | **pnpm** | workspaces |
@@ -49,12 +48,14 @@ PipeCommerce เป็น SaaS e-commerce platform แบบ Shopify-like สำ
 
 | ❌ ไม่ใช้ | เหตุผล |
 |---|---|
-| Vercel | ต้องการอยู่ใน CF ecosystem ทั้งหมด |
-| Inngest / Trigger.dev | CF Queues + Workflows เพียงพอ ลด vendor |
+| Vercel | Railway ราคา/scale ดีกว่าและไม่ผูก Next.js เวอร์ชัน |
+| Cloudflare Workers (สำหรับ Next.js) | postgres-js + Hyperdrive ค้างเป็น minute-level — เลิกใช้ 2026-05 |
+| Supabase Auth + DB | Auth.js + Railway PG cover MVP; ลด vendor dependency |
+| Inngest / Trigger.dev | pg-boss + Railway Cron เพียงพอ ลด vendor |
 | Stripe Connect | ใช้ Beamcheckout แทน (ตลาดไทย) |
-| Redis (Upstash) | CF KV + Postgres เพียงพอตอนต้น |
+| Redis (Upstash) | Postgres + in-memory เพียงพอตอนต้น |
 | Microservices | monorepo monolith Next.js + workers เพียงพอ |
-| Prisma | Drizzle เบากว่าและทำงานดีกับ edge |
+| Prisma | Drizzle เบากว่า + raw SQL friendly |
 | tRPC | ใช้ REST/Server Actions — public API จะเปิดทีหลัง |
 | Schema-per-tenant | shared schema + RLS เพียงพอ migration ง่ายกว่ามาก |
 
@@ -222,9 +223,12 @@ Checkout flow:
 แยกเป็น 2 โดเมน auth ที่ต่างกันโดยสิ้นเชิง
 
 ### Admin / Staff Auth (เจ้าของร้าน + พนักงาน)
-- **Supabase Auth** — magic link + Google OAuth (ทาง option)
-- ผูกกับ `auth.users` (Supabase) → `shop_members` (membership ในแต่ละร้าน)
-- ใช้ Supabase RLS โดยตรงผ่าน `auth.uid()` ใน policy
+- **Auth.js v5 (NextAuth)** — Resend magic link เป็น primary, จะเพิ่ม Google OAuth ทีหลัง
+- Drizzle adapter เก็บใน tables `users` / `accounts` / `sessions` / `verification_tokens`
+- `session.strategy = 'database'` → opaque cookie token, ไม่ใช่ JWT
+- `shop_members.user_id` FK → `users.id`
+- RLS เก่าที่อ้าง `auth.uid()` (Supabase) ไม่ใช้แล้ว — authorize ใน application layer
+  (Next.js Server Actions เช็ค membership ก่อนทุก mutation)
 
 ### Customer Auth (storefront)
 - **Custom flow** — ไม่ใช้ Supabase Auth (เพราะ identity ของ customer scoped per-shop)
@@ -1411,10 +1415,10 @@ return success
 ### Design principles ที่จะ apply เมื่อทำ
 
 - **API versioning:** ใช้ URL prefix `/api/v1/` ตั้งแต่ MVP — กัน breaking change ทีหลัง
-- **Rate limiting:** Cloudflare WAF + per-shop quota (เก็บใน KV)
+- **Rate limiting:** Cloudflare WAF (edge) + per-shop quota ใน Postgres (token-bucket table)
 - **Idempotency:** ทุก mutation API รองรับ `Idempotency-Key` header (Beam pattern)
 - **Webhook signature:** HMAC-SHA256 ใช้ secret ของ webhook → ลูกค้า verify
-- **Integration credentials:** เก็บใน Supabase Vault per-shop (เหมือน Beam, LINE)
+- **Integration credentials:** เก็บใน table `shop_secrets` (pgcrypto encrypt-at-rest) per-shop
 - **Connector pattern:** แต่ละ integration เป็น `packages/integrations/{name}` — ไม่ปนเปื้อนกับ core
 
 ### หมายเหตุ
@@ -1426,7 +1430,7 @@ return success
 
 ## Background Jobs
 
-ใช้ **Cloudflare Queues** เริ่มต้น:
+ใช้ **pg-boss** (Postgres-backed queue) เริ่มต้น — ทำงานใน admin service เอง, ไม่ต้องแยก worker process:
 
 | Queue | Producer | Consumer | Purpose |
 |---|---|---|---|
@@ -1443,7 +1447,7 @@ return success
 | `line-push` `[P2]` | domain event fanout | queue-consumer | ส่ง LINE push ผ่าน Messaging API |
 | `line-webhook` `[P2]` | LINE webhook endpoint | queue-consumer | follow/unfollow/message events |
 
-**Cron Triggers:**
+**Cron Triggers** (Railway Cron → curl `/api/cron/<name>` พร้อม HMAC):
 - abandoned cart recovery (ทุก 1 ชม.)
 - subscription billing (ทุกวัน)
 - cleanup expired carts (ทุกวัน)
@@ -1455,7 +1459,7 @@ return success
 - **loyalty expiry warning email** (ทุกสัปดาห์) — เตือนก่อนแต้มหมด 30 วัน
 - **customer_loyalty cache reconciliation** (ทุกคืน) — recalculate จาก ledger กัน drift
 
-**Cloudflare Workflows:** ยังไม่ใช้ — เพิ่มเมื่อมี multi-step durable flow ที่ Queue ทำได้ลำบาก (เช่น recovery flow ที่ต้อง wait หลายวัน)
+**Durable workflows:** ยังไม่ใช้ external service — pg-boss state machine + cron polling เพียงพอสำหรับ wait-then-do แบบเป็นวัน
 
 ---
 
@@ -1464,12 +1468,10 @@ return success
 ```
 pipecommerce/
 ├── apps/
-│   ├── storefront/          # Next.js 16 — public, custom domain
-│   ├── admin/               # Next.js 16 — admin.yourapp.com
-│   ├── storefront-liff/     # Next.js 16 — liff.yourapp.com [P2]
-│   └── workers/
-│       ├── queue-consumer/  # CF Queue handlers
-│       └── cron/            # scheduled jobs
+│   ├── storefront/          # Next.js 16 — public, custom domain (Railway)
+│   ├── admin/               # Next.js 16 — console.pipecommerce.com (Railway)
+│   ├── storefront-liff/     # Next.js 16 — liff.pipecommerce.com [P2]
+│   └── r2-proxy/            # CF Worker — files.pipecommerce.com → R2
 ├── packages/
 │   ├── db/                  # Drizzle schema + migrations + client
 │   ├── core/                # business logic
@@ -1489,7 +1491,8 @@ pipecommerce/
 │   ├── line/                # LINE Messaging + LIFF SDK wrapper [P2]
 │   ├── email/               # React Email templates + Resend wrapper
 │   ├── ui/                  # shadcn components shared
-│   ├── auth/                # admin (Supabase) + customer (custom OAuth) helpers
+│   # admin auth = Auth.js v5 in apps/admin/auth.ts (no shared pkg)
+│   # customer auth = packages/customer-auth (custom OAuth) [P1.5]
 │   ├── themes/              # 5 storefront themes + shared section primitives
 │   │   ├── shared/          # cross-theme: Cart, Checkout, base layouts
 │   │   ├── minimal/
@@ -1524,26 +1527,25 @@ pipecommerce/
 
 | Service | Cost/mo |
 |---|---|
-| Cloudflare Workers Paid | $5 |
+| Railway — 2 Next services + Postgres (Hobby/Pro starter) | ~$10–25 |
+| Cloudflare Workers Paid (r2-proxy) | $5 |
 | Cloudflare R2 | ~$1–3 |
-| Cloudflare Image Resizing | ~$1–5 |
 | Cloudflare for SaaS hostnames | $0 (100 free) |
-| Cloudflare Queues / KV | $0 (รวมใน Workers Paid) |
-| Supabase Pro | $25 |
 | Resend | $0 (free tier 3k email/mo) |
 | Sentry | $0 (Developer plan) |
 | Domain | ~$1 |
-| **Total** | **~$35–50/mo** |
+| **Total** | **~$20–40/mo** |
 
 ---
 
 ## Constraints & Risks
 
 ### Technical
-1. **Cloudflare Workers limits** — no Node.js APIs, must use Web APIs / edge-compatible packages
-2. **Postgres connections** — ต้องผ่าน Hyperdrive เสมอ ห้ามต่อตรงจาก Worker
-3. **OpenNext Next 16 compat** — เช็ค changelog ของ `@opennextjs/cloudflare` ก่อน setup
-4. **RLS debugging** — ต้องมี pgTAP test suite
+1. **Railway region** — ตอนนี้มี US/EU/SG; เลือก SG ใกล้ผู้ใช้ไทย, Postgres ต้องอยู่ region เดียวกัน
+2. **No edge** — apps เป็น Node long-running; latency ไกล user ต่างทวีปสูงกว่า CF Workers (offset ด้วย CF CDN ที่ static assets)
+3. **Postgres connections** — postgres-js + `max: 10` per service เพียงพอตอน MVP; scale → เพิ่ม pgbouncer/PgCat
+4. **App layer authz** — แทน Supabase RLS, ต้องเช็ค membership/ownership ใน Server Actions ทุก mutation
+5. **Auth.js + Next 16** — peer dep ยังเตือน (beta.29 ระบุ next ^14/^15) แต่ runtime ใช้ได้
 
 ### Business
 1. **Beam ไม่มี marketplace** — onboarding ต้องให้ร้านสมัคร Beam เอง, slow time-to-launch

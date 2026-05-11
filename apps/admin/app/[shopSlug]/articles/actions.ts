@@ -32,6 +32,7 @@ function readForm(formData: FormData) {
     tags: parseTags(String(formData.get('tags') ?? '')),
     seoTitle: String(formData.get('seoTitle') ?? '').trim() || null,
     seoDescription: String(formData.get('seoDescription') ?? '').trim() || null,
+    featuredImageUrl: String(formData.get('featuredImageUrl') ?? '').trim() || null,
   }
 }
 
@@ -74,6 +75,7 @@ export async function createArticle(
         tags: input.tags,
         seoTitle: input.seoTitle,
         seoDescription: input.seoDescription,
+        featuredImageUrl: input.featuredImageUrl,
         publishedAt: input.status === 'active' ? new Date() : null,
       })
       .returning({ id: articles.id })

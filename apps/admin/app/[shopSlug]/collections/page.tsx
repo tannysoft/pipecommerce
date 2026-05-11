@@ -1,6 +1,19 @@
 import { count, desc, eq } from '@pipecommerce/db'
 import { collectionProducts, collections } from '@pipecommerce/db/schema'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
@@ -54,33 +67,35 @@ export default async function CollectionsListPage({
       </div>
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Title</th>
-              <th className="px-4 py-2 font-medium">Handle</th>
-              <th className="px-4 py-2 font-medium">Type</th>
-              <th className="px-4 py-2 text-right font-medium">Products</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Handle</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead className="text-right">Products</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {list.map((c) => (
-              <tr key={c.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                <td className="px-4 py-2">
+              <TableRow key={c.id}>
+                <TableCell>
                   <Link
                     href={`/${shop.slug}/collections/${c.id}`}
                     className="font-medium hover:underline"
                   >
                     {c.title}
                   </Link>
-                </td>
-                <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{c.handle}</td>
-                <td className="px-4 py-2 text-xs text-muted-foreground">{c.type}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{c.productCount}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {c.handle}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{c.type}</TableCell>
+                <TableCell className="text-right tabular-nums">{c.productCount}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )

@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
 import { PageEditForm } from './edit-form.tsx'
+import { PageFeaturedImageUploader } from './featured-image-uploader.tsx'
 
 export default async function PageEditorPage({
   params,
@@ -31,6 +32,19 @@ export default async function PageEditorPage({
       >
         ← กลับไปรายการ
       </Link>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Featured image</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PageFeaturedImageUploader
+            shopSlug={shopSlug}
+            pageId={page.id}
+            currentUrl={page.featuredImageUrl}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

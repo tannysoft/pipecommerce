@@ -1,8 +1,8 @@
-import { createServerClient } from '@pipecommerce/auth/admin/server'
 import { and, eq } from '@pipecommerce/db'
 import { shopMembers, shops } from '@pipecommerce/db/schema'
 import { notFound, redirect } from 'next/navigation'
 import { cache } from 'react'
+import { auth } from '@/auth.ts'
 import { db } from './db.ts'
 
 export type ShopSettings = {
@@ -30,11 +30,9 @@ export type AdminShop = {
  *   ไม่เจอ shop หรือ user ไม่เป็น member → notFound() (ไม่ leak existence)
  */
 export const requireShop = cache(async (slug: string) => {
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth()
+  const user = session?.user
+  if (!user?.id || !user.email) redirect('/login')
 
   const [shop] = await db
     .select({
@@ -58,6 +56,6 @@ export const requireShop = cache(async (slug: string) => {
 
   return {
     shop: { ...shop, settings: (shop.settings ?? {}) as ShopSettings } as AdminShop,
-    user,
+    user: { id: user.id, email: user.email },
   }
 })

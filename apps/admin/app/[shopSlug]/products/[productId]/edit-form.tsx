@@ -1,7 +1,26 @@
 'use client'
 
-import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Button,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  Textarea,
+} from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { ConfirmDialog } from '../../../_components/confirm-dialog.tsx'
+import { TagsInput } from '../../../_components/tags-input.tsx'
 import { archiveProduct, unarchiveProduct, updateProduct } from '../actions.ts'
 
 type Product = {
@@ -12,6 +31,23 @@ type Product = {
   status: string
   tags: string[]
 }
+
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+
+const schema = z.object({
+  title: z.string().min(1, 'กรุณากรอกชื่อสินค้า'),
+  handle: z
+    .string()
+    .min(1, 'กรุณากรอก handle')
+    .max(60, 'ยาวเกิน 60 ตัว')
+    .regex(HANDLE_RE, 'ใช้ได้เฉพาะ a-z, 0-9, -'),
+  price: z.coerce.number({ invalid_type_error: 'ต้องเป็นตัวเลข' }).min(0, 'ต้อง ≥ 0'),
+  description: z.string().optional(),
+  tags: z.array(z.string()).max(20),
+  status: z.enum(['draft', 'active']),
+})
+
+type Values = z.infer<typeof schema>
 
 export function ProductEditForm({
   shopSlug,
@@ -24,22 +60,38 @@ export function ProductEditForm({
 }) {
   const [pending, startTransition] = useTransition()
   const [archivePending, startArchive] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  function onSubmit(formData: FormData) {
-    setError(null)
+  const isArchived = product.status === 'archived'
+
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: product.title,
+      handle: product.handle,
+      price: price ? Number(price) : 0,
+      description: product.description ?? '',
+      tags: product.tags,
+      status: isArchived ? 'draft' : (product.status as Values['status']),
+    },
+  })
+
+  function onSubmit(values: Values) {
+    setServerError(null)
     setSaved(false)
     startTransition(async () => {
+      const formData = new FormData()
+      Object.entries(values).forEach(([k, v]) => {
+        formData.append(k, Array.isArray(v) ? v.join(',') : String(v ?? ''))
+      })
       const res = await updateProduct(shopSlug, product.id, formData)
-      if (!res.ok) setError(res.error)
+      if (!res.ok) setServerError(res.error)
       else setSaved(true)
     })
   }
 
-  function onArchiveToggle() {
-    const isArchived = product.status === 'archived'
-    if (!isArchived && !confirm('Archive สินค้านี้? ลูกค้าจะไม่เห็นในหน้า storefront')) return
+  function runArchive() {
     startArchive(async () => {
       if (isArchived) {
         await unarchiveProduct(shopSlug, product.id)
@@ -51,128 +103,177 @@ export function ProductEditForm({
 
   return (
     <div className="space-y-4">
-      <form action={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">ชื่อสินค้า</Label>
-          <Input
-            id="title"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
             name="title"
-            required
-            disabled={pending}
-            defaultValue={product.title}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ชื่อสินค้า</FormLabel>
+                <FormControl>
+                  <Input disabled={pending} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="handle">URL handle</Label>
-          <Input
-            id="handle"
+          <FormField
+            control={form.control}
             name="handle"
-            required
-            disabled={pending}
-            defaultValue={product.handle}
-            pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-            maxLength={60}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL handle</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={pending}
+                    pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+                    maxLength={60}
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                  />
+                </FormControl>
+                <FormDescription>
+                  ⚠ การเปลี่ยน handle จะทำให้ URL เก่าเสีย (อนาคต system จะ auto-create 301 redirect)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          <p className="text-xs text-muted-foreground">
-            ⚠ การเปลี่ยน handle จะทำให้ URL เก่าเสีย (อนาคต system จะ auto-create 301 redirect)
-          </p>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="price">ราคา (บาท)</Label>
-          <Input
-            id="price"
+          <FormField
+            control={form.control}
             name="price"
-            type="number"
-            step="0.01"
-            min="0"
-            required
-            disabled={pending}
-            defaultValue={price ?? ''}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ราคา (บาท)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min="0" disabled={pending} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">คำอธิบาย</Label>
-          <Textarea
-            id="description"
+          <FormField
+            control={form.control}
             name="description"
-            rows={4}
-            disabled={pending}
-            defaultValue={product.description ?? ''}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>คำอธิบาย</FormLabel>
+                <FormControl>
+                  <Textarea rows={4} disabled={pending} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="tags">Tags</Label>
-          <Input
-            id="tags"
+          <FormField
+            control={form.control}
             name="tags"
-            disabled={pending}
-            defaultValue={product.tags.join(', ')}
-            placeholder="summer, sale, new"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tags</FormLabel>
+                <FormControl>
+                  <TagsInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={pending}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Enter หรือ , เพื่อเพิ่ม tag · สูงสุด 20 tags
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          <p className="text-xs text-muted-foreground">คั่นด้วย comma · ปัจจุบัน {product.tags.length} tags</p>
-        </div>
 
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Status</legend>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="status"
-                value="draft"
-                defaultChecked={product.status === 'draft'}
-              />
-              Draft
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="status"
-                value="active"
-                defaultChecked={product.status === 'active'}
-              />
-              Active
-            </label>
-            {product.status === 'archived' ? (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="radio" name="status" value="archived" defaultChecked disabled />
-                Archived (ใช้ปุ่มด้านล่าง toggle)
-              </label>
-            ) : null}
+          {!isArchived ? (
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem
+                          value="draft"
+                          id="status-draft"
+                          disabled={pending}
+                        />
+                        <Label htmlFor="status-draft" className="font-normal">
+                          Draft
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem
+                          value="active"
+                          id="status-active"
+                          disabled={pending}
+                        />
+                        <Label htmlFor="status-active" className="font-normal">
+                          Active
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              สินค้านี้ถูก archive แล้ว — ใช้ปุ่มด้านล่าง toggle
+            </div>
+          )}
+
+          {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
+          {saved ? <p className="text-sm text-green-600">บันทึกแล้ว ✓</p> : null}
+
+          <div className="flex gap-2">
+            <Button type="submit" disabled={pending || isArchived}>
+              {pending ? 'กำลังบันทึก...' : 'บันทึก'}
+            </Button>
           </div>
-        </fieldset>
-
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {saved ? <p className="text-sm text-green-600">บันทึกแล้ว ✓</p> : null}
-
-        <div className="flex gap-2">
-          <Button type="submit" disabled={pending}>
-            {pending ? 'กำลังบันทึก...' : 'บันทึก'}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </Form>
 
       <div className="flex items-center justify-between border-t pt-4">
         <p className="text-sm text-muted-foreground">
-          {product.status === 'archived' ? 'สินค้านี้ถูก archive แล้ว' : 'Archive แทนการลบ'}
+          {isArchived ? 'สินค้านี้ถูก archive แล้ว' : 'Archive แทนการลบ'}
         </p>
-        <Button
-          type="button"
-          variant={product.status === 'archived' ? 'outline' : 'destructive'}
-          size="sm"
-          disabled={archivePending}
-          onClick={onArchiveToggle}
-        >
-          {archivePending
-            ? '...'
-            : product.status === 'archived'
-              ? 'Unarchive'
-              : 'Archive'}
-        </Button>
+        {isArchived ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={archivePending}
+            onClick={runArchive}
+          >
+            {archivePending ? '...' : 'Unarchive'}
+          </Button>
+        ) : (
+          <ConfirmDialog
+            title="Archive สินค้านี้?"
+            description="ลูกค้าจะไม่เห็นในหน้า storefront จนกว่าจะ unarchive"
+            confirmLabel="Archive"
+            pending={archivePending}
+            onConfirm={runArchive}
+          >
+            <Button type="button" variant="destructive" size="sm" disabled={archivePending}>
+              {archivePending ? '...' : 'Archive'}
+            </Button>
+          </ConfirmDialog>
+        )}
       </div>
     </div>
   )

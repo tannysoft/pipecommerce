@@ -1,12 +1,15 @@
 import { Button } from '@pipecommerce/ui'
+import { Store } from 'lucide-react'
 import Link from 'next/link'
 import { logout } from '@/app/actions.ts'
+import { SidebarNav } from '@/app/_components/sidebar-nav.tsx'
 import { requireShop } from '@/lib/shop.ts'
 
 /**
- * Shop-scoped layout — gate access ผ่าน requireShop()
+ * Shop-scoped layout — Shopify-style sidebar nav
  *
- * cache() ใน requireShop ทำให้ pages ใต้ layout เรียกซ้ำได้ฟรี
+ * Layout: fixed sidebar (left) + main content (right)
+ * Sidebar grouped: Catalog / Marketing / Content / Analytics / Settings
  */
 export default async function ShopLayout({
   children,
@@ -18,51 +21,54 @@ export default async function ShopLayout({
   const { shopSlug } = await params
   const { shop, user } = await requireShop(shopSlug)
 
-  const navItems = [
-    { href: `/${shop.slug}/dashboard`, label: 'Dashboard' },
-    { href: `/${shop.slug}/products`, label: 'Products' },
-    { href: `/${shop.slug}/collections`, label: 'Collections' },
-    { href: `/${shop.slug}/articles`, label: 'Articles' },
-    { href: `/${shop.slug}/galleries`, label: 'Galleries' },
-    { href: `/${shop.slug}/pages`, label: 'Pages' },
-    { href: `/${shop.slug}/settings`, label: 'Settings' },
-  ]
-
   return (
-    <div className="min-h-screen">
-      <header className="border-b bg-background">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <h1 className="font-semibold">{shop.name}</h1>
-              <p className="text-xs text-muted-foreground">
-                <span className="font-mono">/{shop.slug}</span>
-                {shop.status === 'trial' ? ' · trial' : null}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{user.email}</span>
-              <form action={logout}>
-                <Button type="submit" variant="outline" size="sm">
-                  Logout
-                </Button>
-              </form>
-            </div>
+    <div className="flex min-h-screen bg-muted/30">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-card md:flex">
+        <div className="flex items-center gap-2 border-b px-4 py-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
+            <Store className="h-4 w-4" />
           </div>
-          <nav className="-mb-px flex gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{shop.name}</p>
+            <p className="truncate font-mono text-[10px] text-muted-foreground">
+              /{shop.slug}
+              {shop.status === 'trial' ? ' · trial' : ''}
+            </p>
+          </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl p-4">{children}</main>
+
+        <div className="flex-1 overflow-y-auto">
+          <SidebarNav shopSlug={shop.slug} />
+        </div>
+
+        <div className="border-t px-3 py-3">
+          <p className="truncate px-2 text-xs text-muted-foreground" title={user.email}>
+            {user.email}
+          </p>
+          <form action={logout} className="mt-1.5">
+            <Button type="submit" variant="outline" size="sm" className="w-full">
+              ออกจากระบบ
+            </Button>
+          </form>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
+          <Link href={`/${shop.slug}/dashboard`} className="text-sm font-semibold">
+            {shop.name}
+          </Link>
+          <form action={logout}>
+            <Button type="submit" variant="outline" size="sm">
+              Logout
+            </Button>
+          </form>
+        </header>
+
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="mx-auto max-w-5xl">{children}</div>
+        </main>
+      </div>
     </div>
   )
 }

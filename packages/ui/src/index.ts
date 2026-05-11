@@ -51,5 +51,15 @@ export {
   SelectValue,
 } from './components/select.tsx'
 export { Separator } from './components/separator.tsx'
+export {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './components/table.tsx'
 export { Textarea } from './components/textarea.tsx'
 export { cn } from './lib/utils.ts'

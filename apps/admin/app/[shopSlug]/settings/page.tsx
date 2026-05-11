@@ -13,6 +13,21 @@ const settingsLinks = [
     title: 'Members',
     description: 'เพิ่ม/ลบคนที่ช่วยจัดการร้าน + ตั้ง role',
   },
+  {
+    href: 'tax',
+    title: 'Tax',
+    description: 'ตั้งค่าภาษี (VAT) — 3 modes: inclusive / exclusive / shop absorbs',
+  },
+  {
+    href: 'shipping',
+    title: 'Shipping',
+    description: 'ค่าส่ง flat rate + free threshold',
+  },
+  {
+    href: 'announcement-bar',
+    title: 'Announcement Bar',
+    description: 'แถบประกาศด้านบน storefront — โปรโมชั่น ส่งฟรี ฯลฯ',
+  },
 ]
 
 export default async function SettingsIndexPage({

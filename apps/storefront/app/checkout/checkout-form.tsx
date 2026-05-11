@@ -1,9 +1,15 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -12,148 +18,277 @@ import {
   Textarea,
 } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { placeOrder } from './actions.ts'
+
+const schema = z.object({
+  email: z.string().min(1, 'กรุณากรอกอีเมล').email('รูปแบบอีเมลไม่ถูกต้อง'),
+  phone: z.string().optional(),
+  firstName: z.string().min(1, 'กรุณากรอกชื่อ'),
+  lastName: z.string().optional(),
+  address1: z.string().min(1, 'กรุณากรอกที่อยู่'),
+  address2: z.string().optional(),
+  city: z.string().min(1, 'กรุณากรอกเมือง/อำเภอ'),
+  province: z.string().optional(),
+  postalCode: z.string().min(1, 'กรุณากรอกรหัสไปรษณีย์').max(10),
+  country: z.string().min(1),
+  note: z.string().max(500).optional(),
+  discountCode: z.string().optional(),
+})
+
+type Values = z.infer<typeof schema>
 
 export function CheckoutForm() {
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  function onSubmit(formData: FormData) {
-    setError(null)
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: '',
+      phone: '',
+      firstName: '',
+      lastName: '',
+      address1: '',
+      address2: '',
+      city: '',
+      province: '',
+      postalCode: '',
+      country: 'TH',
+      note: '',
+      discountCode: '',
+    },
+  })
+
+  function onSubmit(values: Values) {
+    setServerError(null)
     startTransition(async () => {
+      const formData = new FormData()
+      Object.entries(values).forEach(([k, v]) => formData.append(k, String(v ?? '')))
       const res = await placeOrder(formData)
-      if (!res.ok) setError(res.error)
+      if (!res.ok) setServerError(res.error)
     })
   }
 
   return (
-    <form action={onSubmit} className="space-y-6 rounded-xl border bg-card p-6">
-      <section className="space-y-3">
-        <h2 className="font-semibold">ข้อมูลติดต่อ</h2>
-        <div className="space-y-2">
-          <Label htmlFor="email">อีเมล</Label>
-          <Input
-            id="email"
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 rounded-xl border bg-card p-6"
+      >
+        <section className="space-y-3">
+          <h2 className="font-semibold">ข้อมูลติดต่อ</h2>
+          <FormField
+            control={form.control}
             name="email"
-            type="email"
-            required
-            disabled={pending}
-            autoComplete="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>อีเมล</FormLabel>
+                <FormControl>
+                  <Input type="email" disabled={pending} autoComplete="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
-          <Input id="phone" name="phone" type="tel" disabled={pending} autoComplete="tel" />
-        </div>
-      </section>
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>เบอร์โทรศัพท์</FormLabel>
+                <FormControl>
+                  <Input type="tel" disabled={pending} autoComplete="tel" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
 
-      <section className="space-y-3 border-t pt-6">
-        <h2 className="font-semibold">ที่อยู่จัดส่ง</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">ชื่อ</Label>
-            <Input
-              id="firstName"
+        <section className="space-y-3 border-t pt-6">
+          <h2 className="font-semibold">ที่อยู่จัดส่ง</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
               name="firstName"
-              required
-              disabled={pending}
-              autoComplete="given-name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ชื่อ</FormLabel>
+                  <FormControl>
+                    <Input disabled={pending} autoComplete="given-name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">นามสกุล</Label>
-            <Input
-              id="lastName"
+            <FormField
+              control={form.control}
               name="lastName"
-              disabled={pending}
-              autoComplete="family-name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>นามสกุล</FormLabel>
+                  <FormControl>
+                    <Input disabled={pending} autoComplete="family-name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="address1">ที่อยู่</Label>
-          <Input
-            id="address1"
+          <FormField
+            control={form.control}
             name="address1"
-            required
-            disabled={pending}
-            autoComplete="address-line1"
-            placeholder="บ้านเลขที่ ตึก ซอย ถนน"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ที่อยู่</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={pending}
+                    autoComplete="address-line1"
+                    placeholder="บ้านเลขที่ ตึก ซอย ถนน"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="address2">ที่อยู่เพิ่มเติม (optional)</Label>
-          <Input
-            id="address2"
+          <FormField
+            control={form.control}
             name="address2"
-            disabled={pending}
-            autoComplete="address-line2"
-            placeholder="ห้อง ชั้น อาคาร"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ที่อยู่เพิ่มเติม (optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={pending}
+                    autoComplete="address-line2"
+                    placeholder="ห้อง ชั้น อาคาร"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="city">เมือง/อำเภอ</Label>
-            <Input
-              id="city"
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
               name="city"
-              required
-              disabled={pending}
-              autoComplete="address-level2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>เมือง/อำเภอ</FormLabel>
+                  <FormControl>
+                    <Input disabled={pending} autoComplete="address-level2" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="province">จังหวัด</Label>
-            <Input
-              id="province"
+            <FormField
+              control={form.control}
               name="province"
-              disabled={pending}
-              autoComplete="address-level1"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>จังหวัด</FormLabel>
+                  <FormControl>
+                    <Input disabled={pending} autoComplete="address-level1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="postalCode">รหัสไปรษณีย์</Label>
-            <Input
-              id="postalCode"
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
               name="postalCode"
-              required
-              disabled={pending}
-              autoComplete="postal-code"
-              maxLength={10}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>รหัสไปรษณีย์</FormLabel>
+                  <FormControl>
+                    <Input
+                      disabled={pending}
+                      autoComplete="postal-code"
+                      maxLength={10}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ประเทศ</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={pending}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="TH">ไทย</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="country">ประเทศ</Label>
-            <Select name="country" defaultValue="TH" disabled={pending}>
-              <SelectTrigger id="country">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TH">ไทย</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="space-y-3 border-t pt-6">
-        <Label htmlFor="note">หมายเหตุ (optional)</Label>
-        <Textarea
-          id="note"
-          name="note"
-          rows={2}
-          disabled={pending}
-          maxLength={500}
-        />
-      </section>
+        <section className="space-y-3 border-t pt-6">
+          <FormField
+            control={form.control}
+            name="discountCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>รหัสส่วนลด (optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={pending}
+                    placeholder="เช่น SUMMER20"
+                    className="font-mono uppercase"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <FormField
+            control={form.control}
+            name="note"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>หมายเหตุ (optional)</FormLabel>
+                <FormControl>
+                  <Textarea rows={2} disabled={pending} maxLength={500} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
 
-      <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'กำลังสร้างออเดอร์...' : 'สั่งซื้อ'}
-      </Button>
-    </form>
+        {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
+
+        <Button type="submit" className="w-full" size="lg" disabled={pending}>
+          {pending ? 'กำลังสร้างออเดอร์...' : 'สั่งซื้อ'}
+        </Button>
+      </form>
+    </Form>
   )
 }

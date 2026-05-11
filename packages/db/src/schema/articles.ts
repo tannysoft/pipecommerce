@@ -44,7 +44,8 @@ export const articles = pgTable(
     body: text(), // HTML
     excerpt: text(),
 
-    featuredImageId: uuid(), // FK to article_images.id ใส่ใน app logic
+    featuredImageId: uuid(), // FK to article_images.id (legacy — managed via image-actions.ts)
+    featuredImageUrl: text(), // R2 public URL — new path: ImageUploadField เก็บ URL ตรงๆ
     authorUserId: uuid(),
     authorName: text(), // snapshot
 

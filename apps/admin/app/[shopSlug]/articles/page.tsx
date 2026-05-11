@@ -1,6 +1,19 @@
 import { and, desc, eq, isNull } from '@pipecommerce/db'
 import { articles } from '@pipecommerce/db/schema'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
@@ -59,19 +72,19 @@ export default async function ArticlesListPage({
       </div>
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Title</th>
-              <th className="px-4 py-2 font-medium">Author</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Published</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Author</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Published</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {list.map((a) => (
-              <tr key={a.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                <td className="px-4 py-2">
+              <TableRow key={a.id}>
+                <TableCell>
                   <Link
                     href={`/${shop.slug}/articles/${a.id}`}
                     className="font-medium hover:underline"
@@ -79,24 +92,24 @@ export default async function ArticlesListPage({
                     {a.title}
                   </Link>
                   <p className="font-mono text-xs text-muted-foreground">/blog/{a.handle}</p>
-                </td>
-                <td className="px-4 py-2 text-xs text-muted-foreground">
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
                   {a.authorName ?? '—'}
-                </td>
-                <td className="px-4 py-2">
+                </TableCell>
+                <TableCell>
                   <span
                     className={`rounded px-2 py-0.5 text-xs ${STATUS_BADGE[a.status] ?? STATUS_BADGE.draft}`}
                   >
                     {a.status}
                   </span>
-                </td>
-                <td className="px-4 py-2 text-xs text-muted-foreground">
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
                   {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('th-TH') : '—'}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )

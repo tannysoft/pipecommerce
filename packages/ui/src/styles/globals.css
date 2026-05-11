@@ -4,11 +4,11 @@
  * Apps import นี้หลัง @import "tailwindcss" ใน globals.css
  * จะได้ utility คลาส bg-background, text-foreground, etc. + dark mode
  *
+ * NOTE: apps ต้อง import 'tw-animate-css' เองใน globals.css ของตัวเอง
+ * (resolver ของ Turbopack ไม่ walk จาก packages/ui/node_modules ขึ้นมาได้)
  * tw-animate-css ให้ utility data-[state=open]:animate-in / fade-in-0 /
  * zoom-in-95 / slide-in-from-* ที่ Radix components ต้องการ
  */
-@import 'tw-animate-css';
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

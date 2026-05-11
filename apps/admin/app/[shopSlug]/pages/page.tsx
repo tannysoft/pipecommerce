@@ -1,6 +1,19 @@
 import { and, desc, eq, isNull } from '@pipecommerce/db'
 import { pages } from '@pipecommerce/db/schema'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@pipecommerce/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@pipecommerce/ui'
 import Link from 'next/link'
 import { db } from '@/lib/db.ts'
 import { requireShop } from '@/lib/shop.ts'
@@ -60,39 +73,39 @@ export default async function PagesListPage({
       </div>
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Title</th>
-              <th className="px-4 py-2 font-medium">Handle</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Handle</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {list.map((p) => (
-              <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                <td className="px-4 py-2">
+              <TableRow key={p.id}>
+                <TableCell>
                   <Link
                     href={`/${shop.slug}/pages/${p.id}`}
                     className="font-medium hover:underline"
                   >
                     {p.title}
                   </Link>
-                </td>
-                <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
                   /pages/{p.handle}
-                </td>
-                <td className="px-4 py-2">
+                </TableCell>
+                <TableCell>
                   <span
                     className={`rounded px-2 py-0.5 text-xs ${STATUS_BADGE[p.status] ?? STATUS_BADGE.draft}`}
                   >
                     {p.status}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )

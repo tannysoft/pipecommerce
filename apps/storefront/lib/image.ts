@@ -6,9 +6,8 @@
  *          จะ generate low/mid/high แล้ว URL pattern จะเปลี่ยนเป็น
  *          shops/{shop_id}/img/{uuid}/{low|mid|high}.webp
  */
-const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, '')
-
 export function publicImageUrl(r2Key: string): string {
-  if (!R2_PUBLIC_URL) throw new Error('R2_PUBLIC_URL is not set')
-  return `${R2_PUBLIC_URL}/${r2Key}`
+  const base = (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, '')
+  if (!base) throw new Error('R2_PUBLIC_URL is not set')
+  return `${base}/${r2Key}`
 }

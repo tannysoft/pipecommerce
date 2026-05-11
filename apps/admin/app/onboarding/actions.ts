@@ -1,8 +1,8 @@
 'use server'
 
-import { createServerClient } from '@pipecommerce/auth/admin/server'
 import { shopMembers, shops } from '@pipecommerce/db/schema'
 import { redirect } from 'next/navigation'
+import { auth } from '@/auth.ts'
 import { db } from '@/lib/db.ts'
 
 const RESERVED_SLUGS = new Set([
@@ -31,11 +31,9 @@ const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 export type CreateShopResult = { ok: true } | { ok: false; error: string }
 
 export async function createShop(formData: FormData): Promise<CreateShopResult> {
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'ไม่ได้ login' }
+  const session = await auth()
+  const userId = session?.user?.id
+  if (!userId) return { ok: false, error: 'ไม่ได้ login' }
 
   const name = String(formData.get('name') ?? '').trim()
   const slug = String(formData.get('slug') ?? '').trim().toLowerCase()
@@ -55,7 +53,7 @@ export async function createShop(formData: FormData): Promise<CreateShopResult> 
         .values({
           slug,
           name,
-          ownerUserId: user.id,
+          ownerUserId: userId,
           status: 'trial',
         })
         .returning({ id: shops.id, slug: shops.slug })
@@ -64,7 +62,7 @@ export async function createShop(formData: FormData): Promise<CreateShopResult> 
 
       await tx.insert(shopMembers).values({
         shopId: shop.id,
-        userId: user.id,
+        userId,
         role: 'owner',
         acceptedAt: new Date(),
       })
@@ -73,7 +71,6 @@ export async function createShop(formData: FormData): Promise<CreateShopResult> 
     })
     createdSlug = result.slug
   } catch (error) {
-    // Postgres unique violation
     if ((error as { code?: string })?.code === '23505') {
       return { ok: false, error: 'URL นี้มีคนใช้แล้ว — เลือกอื่น' }
     }

@@ -1,7 +1,20 @@
 'use client'
 
-import { Button, Input, Label } from '@pipecommerce/ui'
-import { useState, useTransition } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Button,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@pipecommerce/ui'
+import { useEffect, useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { createShop } from './actions.ts'
 
 function slugify(input: string) {
@@ -15,63 +28,94 @@ function slugify(input: string) {
     .slice(0, 30)
 }
 
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+
+const schema = z.object({
+  name: z.string().min(1, 'กรุณากรอกชื่อร้าน'),
+  slug: z
+    .string()
+    .min(3, 'อย่างน้อย 3 ตัวอักษร')
+    .max(30, 'ยาวเกิน 30 ตัว')
+    .regex(SLUG_RE, 'ใช้ได้เฉพาะ a-z, 0-9, -'),
+})
+
+type Values = z.infer<typeof schema>
+
 export function OnboardingForm() {
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
+  const [serverError, setServerError] = useState<string | null>(null)
   const [slugTouched, setSlugTouched] = useState(false)
 
-  function onNameChange(value: string) {
-    setName(value)
-    if (!slugTouched) setSlug(slugify(value))
-  }
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: '', slug: '' },
+  })
 
-  function onSubmit(formData: FormData) {
-    setError(null)
+  const nameValue = form.watch('name')
+  useEffect(() => {
+    if (!slugTouched) form.setValue('slug', slugify(nameValue))
+  }, [nameValue, slugTouched, form])
+
+  function onSubmit(values: Values) {
+    setServerError(null)
     startTransition(async () => {
+      const formData = new FormData()
+      formData.append('name', values.name)
+      formData.append('slug', values.slug)
       const res = await createShop(formData)
-      if (!res.ok) setError(res.error)
+      if (!res.ok) setServerError(res.error)
     })
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">ชื่อร้าน</Label>
-        <Input
-          id="name"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
           name="name"
-          required
-          disabled={pending}
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="ร้านน่ารัก"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ชื่อร้าน</FormLabel>
+              <FormControl>
+                <Input disabled={pending} placeholder="ร้านน่ารัก" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="slug">URL ของร้าน</Label>
-        <Input
-          id="slug"
+
+        <FormField
+          control={form.control}
           name="slug"
-          required
-          disabled={pending}
-          value={slug}
-          onChange={(e) => {
-            setSlug(e.target.value.toLowerCase())
-            setSlugTouched(true)
-          }}
-          pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-          minLength={3}
-          maxLength={30}
-          placeholder="my-shop"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL ของร้าน</FormLabel>
+              <FormControl>
+                <Input
+                  disabled={pending}
+                  pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+                  minLength={3}
+                  maxLength={30}
+                  placeholder="my-shop"
+                  {...field}
+                  onChange={(e) => {
+                    field.onChange(e.target.value.toLowerCase())
+                    setSlugTouched(true)
+                  }}
+                />
+              </FormControl>
+              <FormDescription>a-z, 0-9, - เท่านั้น (3-30 ตัว)</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        <p className="text-xs text-muted-foreground">a-z, 0-9, - เท่านั้น (3-30 ตัว)</p>
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" className="w-full" disabled={pending || !name || !slug}>
-        {pending ? 'กำลังสร้าง...' : 'สร้างร้าน'}
-      </Button>
-    </form>
+
+        {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
+
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending ? 'กำลังสร้าง...' : 'สร้างร้าน'}
+        </Button>
+      </form>
+    </Form>
   )
 }

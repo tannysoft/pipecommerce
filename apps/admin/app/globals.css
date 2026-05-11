@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 @import '../../../packages/ui/src/styles/globals.css';
 @import '../../../packages/config/tailwind/preset.css';
 
@@ -17,4 +18,105 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }
+}
+
+/* Tiptap editor — minimal prose + multi-column layout */
+.tiptap {
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+.tiptap p { margin: 0.5em 0; }
+.tiptap h1 { font-size: 1.75rem; font-weight: 700; margin: 0.75em 0 0.5em; }
+.tiptap h2 { font-size: 1.4rem; font-weight: 600; margin: 0.75em 0 0.5em; }
+.tiptap h3 { font-size: 1.15rem; font-weight: 600; margin: 0.5em 0; }
+.tiptap ul, .tiptap ol { padding-left: 1.5rem; margin: 0.5em 0; }
+.tiptap ul { list-style: disc; }
+.tiptap ol { list-style: decimal; }
+.tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  margin: 0.75em 0;
+  color: var(--muted-foreground);
+}
+.tiptap code {
+  background: var(--muted);
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+.tiptap pre {
+  background: var(--muted);
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+.tiptap pre code { background: none; padding: 0; }
+.tiptap a { color: var(--primary); text-decoration: underline; }
+.tiptap img { max-width: 100%; height: auto; border-radius: 0.375rem; }
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
+/* Tables ใน editor */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75em 0;
+  overflow: hidden;
+}
+.tiptap table th,
+.tiptap table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+  position: relative;
+  min-width: 4rem;
+}
+.tiptap table th {
+  background: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+.tiptap table .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+  pointer-events: none;
+}
+.tiptap table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary);
+  cursor: col-resize;
+  pointer-events: none;
+}
+.tiptap .tableWrapper {
+  overflow-x: auto;
+}
+
+/* Multi-column blocks (custom Tiptap nodes) */
+.tiptap-columns {
+  display: grid;
+  gap: 1rem;
+  margin: 0.75em 0;
+}
+.tiptap-columns-2 { grid-template-columns: 1fr 1fr; }
+.tiptap-columns-3 { grid-template-columns: 1fr 1fr 1fr; }
+.tiptap-column {
+  border: 1px dashed var(--border);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  min-height: 3rem;
+}
+@media (max-width: 640px) {
+  .tiptap-columns { grid-template-columns: 1fr; }
 }

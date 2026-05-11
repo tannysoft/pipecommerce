@@ -1,7 +1,23 @@
 'use client'
 
-import { Button, Input, Label, Textarea } from '@pipecommerce/ui'
-import { useState, useTransition } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  Textarea,
+} from '@pipecommerce/ui'
+import { useEffect, useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { createGallery } from '../actions.ts'
 
 function slugify(s: string) {
@@ -15,94 +31,143 @@ function slugify(s: string) {
     .slice(0, 60)
 }
 
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+
+const schema = z.object({
+  title: z.string().min(1, 'กรุณากรอก title'),
+  handle: z
+    .string()
+    .min(1, 'กรุณากรอก handle')
+    .max(60, 'ยาวเกิน 60 ตัว')
+    .regex(HANDLE_RE, 'ใช้ได้เฉพาะ a-z, 0-9, -'),
+  description: z.string().optional(),
+  status: z.enum(['draft', 'active']),
+})
+
+type Values = z.infer<typeof schema>
+
 export function NewGalleryForm({ shopSlug }: { shopSlug: string }) {
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [handle, setHandle] = useState('')
+  const [serverError, setServerError] = useState<string | null>(null)
   const [handleTouched, setHandleTouched] = useState(false)
 
-  function onTitleChange(v: string) {
-    setTitle(v)
-    if (!handleTouched) setHandle(slugify(v))
-  }
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { title: '', handle: '', description: '', status: 'draft' },
+  })
 
-  function onSubmit(formData: FormData) {
-    setError(null)
+  const titleValue = form.watch('title')
+  useEffect(() => {
+    if (!handleTouched) form.setValue('handle', slugify(titleValue))
+  }, [titleValue, handleTouched, form])
+
+  function onSubmit(values: Values) {
+    setServerError(null)
     startTransition(async () => {
+      const formData = new FormData()
+      Object.entries(values).forEach(([k, v]) => formData.append(k, String(v ?? '')))
       const res = await createGallery(shopSlug, formData)
-      if (!res.ok) setError(res.error)
+      if (!res.ok) setServerError(res.error)
     })
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
           name="title"
-          required
-          disabled={pending}
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input disabled={pending} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="handle">URL handle</Label>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">/galleries/</span>
-          <Input
-            id="handle"
-            name="handle"
-            required
-            disabled={pending}
-            value={handle}
-            onChange={(e) => {
-              setHandle(e.target.value.toLowerCase())
-              setHandleTouched(true)
-            }}
-            pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-            maxLength={60}
-            className="flex-1"
-          />
-        </div>
-      </div>
+        <FormField
+          control={form.control}
+          name="handle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL handle</FormLabel>
+              <FormControl>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">/galleries/</span>
+                  <Input
+                    disabled={pending}
+                    pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+                    maxLength={60}
+                    className="flex-1"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e.target.value.toLowerCase())
+                      setHandleTouched(true)
+                    }}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div className="space-y-2">
-        <Label htmlFor="description">คำอธิบาย</Label>
-        <Textarea
-          id="description"
+        <FormField
+          control={form.control}
           name="description"
-          rows={3}
-          disabled={pending}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>คำอธิบาย</FormLabel>
+              <FormControl>
+                <Textarea rows={3} disabled={pending} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Status</legend>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="status" value="draft" defaultChecked />
-            Draft
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="status" value="active" />
-            Active (เผยแพร่)
-          </label>
-        </div>
-      </fieldset>
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="draft" id="status-draft" disabled={pending} />
+                    <Label htmlFor="status-draft" className="font-normal">
+                      Draft
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="active" id="status-active" disabled={pending} />
+                    <Label htmlFor="status-active" className="font-normal">
+                      Active (เผยแพร่)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <p className="text-xs text-muted-foreground">
-        อัปโหลดรูปได้หลังสร้าง gallery เสร็จ
-      </p>
+        <p className="text-xs text-muted-foreground">อัปโหลดรูปได้หลังสร้าง gallery เสร็จ</p>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {serverError ? <p className="text-sm text-destructive">{serverError}</p> : null}
 
-      <Button type="submit" disabled={pending || !title || !handle}>
-        {pending ? 'กำลังสร้าง...' : 'สร้าง Gallery'}
-      </Button>
-    </form>
+        <Button type="submit" disabled={pending}>
+          {pending ? 'กำลังสร้าง...' : 'สร้าง Gallery'}
+        </Button>
+      </form>
+    </Form>
   )
 }
