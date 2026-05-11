@@ -1,7 +1,6 @@
 {
-  "$schema": "https://railway.com/railway.schema.json",
+  "$schema": "https://railpack.com/schema.json",
   "build": {
-    "builder": "NIXPACKS",
     "buildCommand": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pipecommerce/storefront... build"
   },
   "deploy": {
