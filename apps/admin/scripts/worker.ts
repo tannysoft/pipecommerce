@@ -1,28 +1,48 @@
 /**
- * Background worker — รันเป็น separate Railway service (process แยกจาก Next.js)
+ * Background worker — รวม pg-boss subscribers + node-cron schedules ใน
+ * process เดียว เพื่อประหยัด Railway service (ไม่ต้องตั้ง Cron Service
+ * แยกอีก 4 ตัวที่ Railway dashboard)
  *
  * Service config:
  *   Build:  corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pipecommerce/admin... build
- *   Start:  node --experimental-strip-types apps/admin/scripts/worker.ts
+ *   Start:  pnpm --filter @pipecommerce/admin worker
  *
- * หรือ compile เป็น JS ก่อนถ้า node version เก่า
+ * Jobs (pg-boss):
+ *   image-process / email-send / webhook-deliver
  *
- * Jobs ที่ subscribe:
- *   - image-process: download from R2 → resize 3 variants → upload back
- *   - email-send:    ส่ง email ผ่าน Resend
- *   - webhook-deliver: deliver shop webhooks
+ * Cron schedules (node-cron — UTC):
+ *   19:00 daily   → report-snapshot   (02:00 ICT)
+ *   20:00 daily   → loyalty-expire    (03:00 ICT)
+ *   21:00 daily   → loyalty-reconcile (04:00 ICT)
+ *   every 5 min   → sync-hostnames
  */
+import cron from 'node-cron'
+import {
+  runLoyaltyExpire,
+  runLoyaltyReconcile,
+  runReportSnapshot,
+  runSyncHostnames,
+} from '../lib/cron-tasks.ts'
 import { getQueue, QUEUES, type EmailSendJob, type ImageProcessJob } from '../lib/queue.ts'
 import { processImageJob } from './workers/image-process.ts'
 import { processEmailJob } from './workers/email-send.ts'
 
+async function withLog<T>(label: string, fn: () => Promise<T>): Promise<void> {
+  const start = Date.now()
+  try {
+    const result = await fn()
+    console.log(`[cron] ${label} ok in ${Date.now() - start}ms`, result)
+  } catch (err) {
+    console.error(`[cron] ${label} failed in ${Date.now() - start}ms:`, err)
+  }
+}
+
 async function main() {
   console.log('[worker] starting…')
-  const boss = await getQueue()
 
-  boss.on('error', (err) => {
-    console.error('[worker] pg-boss error:', err)
-  })
+  // ─── pg-boss queue subscribers ──────────────────────────────────────────
+  const boss = await getQueue()
+  boss.on('error', (err) => console.error('[worker] pg-boss error:', err))
 
   await boss.work<ImageProcessJob>(QUEUES.imageProcess, { batchSize: 2 }, async (jobs) => {
     for (const job of jobs) {
@@ -46,11 +66,21 @@ async function main() {
     }
   })
 
-  console.log('[worker] subscribed to', Object.values(QUEUES).join(', '))
+  console.log('[worker] queue subscribed:', Object.values(QUEUES).join(', '))
+
+  // ─── node-cron schedules (UTC) ──────────────────────────────────────────
+  // หมายเหตุ: node-cron ใช้ server timezone (Railway = UTC)
+  cron.schedule('0 19 * * *', () => withLog('report-snapshot', runReportSnapshot))
+  cron.schedule('0 20 * * *', () => withLog('loyalty-expire', runLoyaltyExpire))
+  cron.schedule('0 21 * * *', () => withLog('loyalty-reconcile', runLoyaltyReconcile))
+  cron.schedule('*/5 * * * *', () => withLog('sync-hostnames', runSyncHostnames))
+
+  console.log('[worker] cron schedules registered (4 jobs)')
 
   // Graceful shutdown
   const shutdown = async (sig: string) => {
     console.log(`[worker] ${sig} — stopping…`)
+    cron.getTasks().forEach((t) => t.stop())
     await boss.stop({ graceful: true, timeout: 30_000 })
     process.exit(0)
   }

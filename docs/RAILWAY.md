@@ -92,20 +92,38 @@ repo:
 Or use the config-as-code file `apps/admin/railway-worker.json` (point service
 Config Path there).
 
-## Railway Cron
+## Cron jobs
 
-For scheduled jobs, configure Railway Cron with `Authorization: Bearer
-${{shared.CRON_SECRET}}` header (or admin's `CRON_SECRET` ref).
+Railway's Cron feature runs a **command on schedule** — it doesn't curl URLs
+for you. We avoid creating 4 separate Cron services by running all schedules
+**inside the worker service** with `node-cron` (see `apps/admin/scripts/worker.ts`).
 
-| Schedule | URL | Purpose |
+So with the worker service deployed, you get for free (UTC schedule):
+
+| Schedule | Task | ICT time |
 | --- | --- | --- |
-| `0 19 * * *` (02:00 ICT) | `https://console.pipecommerce.com/api/cron/report-snapshot` | Pre-aggregate yesterday's sales |
-| `0 20 * * *` (03:00 ICT) | `https://console.pipecommerce.com/api/cron/loyalty-expire` | Expire loyalty points |
-| `0 21 * * *` (04:00 ICT) | `https://console.pipecommerce.com/api/cron/loyalty-reconcile` | Recalc balance cache |
-| `*/5 * * * *` | `https://console.pipecommerce.com/api/cron/sync-hostnames` | Poll CF for SSL status |
+| `0 19 * * *` | report-snapshot | 02:00 |
+| `0 20 * * *` | loyalty-expire | 03:00 |
+| `0 21 * * *` | loyalty-reconcile | 04:00 |
+| `*/5 * * * *` | sync-hostnames | every 5 min |
 
-All cron endpoints return 401 without the `CRON_SECRET` and 503 if it's not
-configured server-side.
+### Optional: external trigger (debugging / failover)
+
+The `/api/cron/*` HTTP endpoints still exist for manual trigger. Hit them with
+`Authorization: Bearer $CRON_SECRET`:
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  https://console.pipecommerce.com/api/cron/loyalty-expire
+```
+
+Returns 401 without the header, 503 if `CRON_SECRET` not set server-side.
+
+### Optional: skip the worker, use Railway Cron services
+
+If you don't want to run the worker process, create 4 small Railway services
+using the `curlimages/curl` image. Set Cron Schedule + Start Command =
+`curl -fsSL -X POST -H "Authorization: Bearer $CRON_SECRET" $ADMIN_URL/api/cron/<name>`.
 
 ## DNS (Cloudflare)
 
