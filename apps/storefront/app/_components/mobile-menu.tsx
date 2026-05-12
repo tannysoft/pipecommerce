@@ -35,7 +35,7 @@ export function MobileMenu({ links }: { links: NavLink[] }) {
         aria-label="เปิดเมนู"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent md:hidden"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent md:hidden"
       >
         <Menu className="size-5" aria-hidden />
       </button>
@@ -51,7 +51,7 @@ export function MobileMenu({ links }: { links: NavLink[] }) {
               type="button"
               aria-label="ปิดเมนู"
               onClick={() => setOpen(false)}
-              className="inline-flex size-9 items-center justify-center rounded-md hover:bg-accent"
+              className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
             >
               <X className="size-5" aria-hidden />
             </button>

@@ -106,3 +106,12 @@
   --input: oklch(1 0 0 / 0.15);
   --ring: oklch(0.556 0 0);
 }
+
+/* Tailwind v4 ตั้ง default ของ <button> เป็น cursor-default ต่างจาก v3
+   คืน behavior เดิมให้ปุ่มทุกตัวเป็น pointer (override ได้ด้วย cursor-* utility) */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}

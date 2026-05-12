@@ -43,7 +43,7 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+        className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-primary-foreground transition hover:opacity-90"
         title={customer.email}
       >
         {customer.avatarUrl ? (
@@ -93,7 +93,7 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
               <button
                 type="submit"
                 role="menuitem"
-                className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-accent"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-accent"
               >
                 <LogOut className="size-4" aria-hidden />
                 ออกจากระบบ
