@@ -22,17 +22,23 @@ import { requireShopFromHost } from '@/lib/shop.ts'
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const token = url.searchParams.get('token')
-  if (!token) return NextResponse.redirect(new URL('/account/login?error=missing', url))
+
+  // Railway/proxy: request.url ใช้ port ภายใน (localhost:8080) — สร้าง redirect
+  // จาก x-forwarded-* แทน เพื่อให้ browser ไม่หลุดออก domain เดิม
+  const host =
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? url.host
+  const proto = request.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '')
+  const externalBase = `${proto}://${host}`
+  const redirectTo = (path: string) =>
+    NextResponse.redirect(new URL(path, externalBase))
+
+  if (!token) return redirectTo('/account/login?error=missing')
 
   const payload = await consumeMagicLinkToken(token)
-  if (!payload) {
-    return NextResponse.redirect(new URL('/account/login?error=expired', url))
-  }
+  if (!payload) return redirectTo('/account/login?error=expired')
 
   const shop = await requireShopFromHost()
-  if (payload.shopId !== shop.id) {
-    return NextResponse.redirect(new URL('/account/login?error=shop', url))
-  }
+  if (payload.shopId !== shop.id) return redirectTo('/account/login?error=shop')
 
   // Find or create customer
   const [existing] = await db
@@ -59,5 +65,5 @@ export async function GET(request: NextRequest) {
   const store = await cookies()
   store.set(customerCookieOptions.name, sessionToken, customerCookieOptions.options)
 
-  return NextResponse.redirect(new URL('/account', url))
+  return redirectTo('/account')
 }
