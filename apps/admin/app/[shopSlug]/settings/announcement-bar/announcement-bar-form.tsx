@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Checkbox, Input, Label } from '@pipecommerce/ui'
+import { Button, Checkbox, ColorPicker, Input, Label } from '@pipecommerce/ui'
 import { useState, useTransition } from 'react'
 import { saveAnnouncementBar } from './actions.ts'
 
@@ -23,6 +23,8 @@ export function AnnouncementBarForm({ shopSlug, defaults }: Props) {
   const [saved, setSaved] = useState(false)
   const [isActive, setIsActive] = useState(defaults.isActive)
   const [isDismissible, setIsDismissible] = useState(defaults.isDismissible)
+  const [backgroundColor, setBackgroundColor] = useState(defaults.backgroundColor)
+  const [textColor, setTextColor] = useState(defaults.textColor)
 
   function onSubmit(formData: FormData) {
     setError(null)
@@ -89,24 +91,26 @@ export function AnnouncementBarForm({ shopSlug, defaults }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="backgroundColor">Background color (CSS)</Label>
-          <Input
+          <Label htmlFor="backgroundColor">สีพื้นหลัง</Label>
+          <ColorPicker
             id="backgroundColor"
-            name="backgroundColor"
-            defaultValue={defaults.backgroundColor}
+            value={backgroundColor}
+            onChange={setBackgroundColor}
             disabled={pending}
-            placeholder="#000 หรือ oklch(...)"
+            placeholder="เลือกสีพื้นหลัง"
           />
+          <input type="hidden" name="backgroundColor" value={backgroundColor} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="textColor">Text color (CSS)</Label>
-          <Input
+          <Label htmlFor="textColor">สีตัวอักษร</Label>
+          <ColorPicker
             id="textColor"
-            name="textColor"
-            defaultValue={defaults.textColor}
+            value={textColor}
+            onChange={setTextColor}
             disabled={pending}
-            placeholder="#fff"
+            placeholder="เลือกสีตัวอักษร"
           />
+          <input type="hidden" name="textColor" value={textColor} />
         </div>
       </div>
 

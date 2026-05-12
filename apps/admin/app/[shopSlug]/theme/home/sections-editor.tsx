@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   Button,
+  ColorPicker,
   Input,
   Label,
   Select,
@@ -398,18 +399,18 @@ function SectionForm({
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Background color">
-            <Input
+          <Field label="สีพื้นหลัง">
+            <ColorPicker
               value={(s.backgroundColor as string) ?? ''}
-              onChange={(e) => set('backgroundColor', e.target.value)}
-              placeholder="#fafafa"
+              onChange={(v) => set('backgroundColor', v)}
+              placeholder="เลือกสีพื้นหลัง"
             />
           </Field>
-          <Field label="Text color">
-            <Input
+          <Field label="สีตัวอักษร">
+            <ColorPicker
               value={(s.textColor as string) ?? ''}
-              onChange={(e) => set('textColor', e.target.value)}
-              placeholder="#222"
+              onChange={(v) => set('textColor', v)}
+              placeholder="เลือกสีตัวอักษร"
             />
           </Field>
         </div>

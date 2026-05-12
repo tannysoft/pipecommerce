@@ -13,6 +13,7 @@ export {
   CardTitle,
 } from './components/card.tsx'
 export { Checkbox } from './components/checkbox.tsx'
+export { ColorPicker, type ColorPickerProps } from './components/color-picker.tsx'
 export {
   Dialog,
   DialogClose,
