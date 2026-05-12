@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import { AnnouncementBar } from '@/app/_components/announcement-bar.tsx'
 import { SiteFooter } from '@/app/_components/site-footer.tsx'
+import { SiteHeader } from '@/app/_components/site-header.tsx'
 import { db } from '@/lib/db.ts'
 import { getFontConfig } from '@/lib/fonts.ts'
 import { lookupShopByHost, resolveShopHost } from '@/lib/shop.ts'
@@ -90,6 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         {announcementBar ? <AnnouncementBar {...announcementBar} /> : null}
+        {shop ? <SiteHeader shopName={shop.name} /> : null}
         <div className="flex-1">{children}</div>
         {shop ? <SiteFooter shopName={shop.name} /> : null}
       </body>
