@@ -14,6 +14,8 @@ const PLATFORM_DOMAIN = (process.env.PLATFORM_DOMAIN ?? 'pipecommerce.app').toLo
  */
 const SUBDOMAIN_SUFFIXES = [`.${PLATFORM_DOMAIN}`, '.localhost']
 
+export type ShopMenuItem = { label: string; href: string }
+
 export type ShopSettings = {
   fonts?: { heading?: string; body?: string }
   tax?: {
@@ -25,6 +27,7 @@ export type ShopSettings = {
     defaultRate?: number
     freeThreshold?: number | null
   }
+  menu?: ShopMenuItem[]
   // อื่นๆ ที่จะเพิ่มภายหลัง — seo, robots_txt, ฯลฯ
   [k: string]: unknown
 }
@@ -33,6 +36,8 @@ export type StorefrontShop = {
   id: string
   slug: string
   name: string
+  description: string | null
+  logoUrl: string | null
   status: string
   currency: string
   timezone: string
@@ -43,6 +48,8 @@ const shopColumns = {
   id: shops.id,
   slug: shops.slug,
   name: shops.name,
+  description: shops.description,
+  logoUrl: shops.logoUrl,
   status: shops.status,
   currency: shops.currency,
   timezone: shops.timezone,

@@ -4,6 +4,16 @@ import { requireShop } from '@/lib/shop.ts'
 
 const settingsLinks = [
   {
+    href: 'general',
+    title: 'General',
+    description: 'โลโก้ ชื่อร้าน คำอธิบาย (SEO) — ข้อมูลที่แสดงทั่วไปบน storefront',
+  },
+  {
+    href: 'menu',
+    title: 'Menu',
+    description: 'จัดการเมนูที่แสดงใน header ของ storefront',
+  },
+  {
     href: 'typography',
     title: 'Typography',
     description: 'เลือก font ของ storefront — heading + body (Google Fonts ฟรี)',

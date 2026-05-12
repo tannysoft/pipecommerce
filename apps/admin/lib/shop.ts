@@ -5,8 +5,11 @@ import { cache } from 'react'
 import { auth } from '@/auth.ts'
 import { db } from './db.ts'
 
+export type ShopMenuItem = { label: string; href: string }
+
 export type ShopSettings = {
   fonts?: { heading?: string; body?: string }
+  menu?: ShopMenuItem[]
   [k: string]: unknown
 }
 
@@ -14,6 +17,8 @@ export type AdminShop = {
   id: string
   slug: string
   name: string
+  description: string | null
+  logoUrl: string | null
   status: string
   currency: string
   timezone: string
@@ -39,6 +44,8 @@ export const requireShop = cache(async (slug: string) => {
       id: shops.id,
       slug: shops.slug,
       name: shops.name,
+      description: shops.description,
+      logoUrl: shops.logoUrl,
       status: shops.status,
       currency: shops.currency,
       timezone: shops.timezone,

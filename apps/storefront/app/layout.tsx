@@ -10,9 +10,19 @@ import { getFontConfig } from '@/lib/fonts.ts'
 import { lookupShopByHost, resolveShopHost } from '@/lib/shop.ts'
 import './globals.css'
 
-export const metadata: Metadata = {
-  title: 'PipeCommerce',
-  description: 'Multi-tenant e-commerce platform',
+export async function generateMetadata(): Promise<Metadata> {
+  const host = await resolveShopHost()
+  const shop = host ? await lookupShopByHost(host) : null
+  if (!shop) {
+    return {
+      title: 'PipeCommerce',
+      description: 'Multi-tenant e-commerce platform',
+    }
+  }
+  return {
+    title: { default: shop.name, template: `%s · ${shop.name}` },
+    description: shop.description ?? undefined,
+  }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -91,7 +101,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         {announcementBar ? <AnnouncementBar {...announcementBar} /> : null}
-        {shop ? <SiteHeader shopId={shop.id} shopName={shop.name} /> : null}
+        {shop ? (
+          <SiteHeader
+            shopId={shop.id}
+            shopName={shop.name}
+            logoUrl={shop.logoUrl}
+            menu={shop.settings.menu}
+          />
+        ) : null}
         <div className="flex-1">{children}</div>
         {shop ? <SiteFooter shopName={shop.name} /> : null}
       </body>

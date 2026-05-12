@@ -5,6 +5,8 @@ export const shops = pgTable('shops', {
   id: id(),
   slug: text().notNull().unique(),
   name: text().notNull(),
+  description: text(),
+  logoUrl: text(),
   ownerUserId: uuid().notNull(),
   status: text().notNull().default('trial'), // active | suspended | trial
   currency: text().notNull().default('THB'),

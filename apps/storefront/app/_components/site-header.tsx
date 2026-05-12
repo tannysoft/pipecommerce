@@ -2,36 +2,45 @@ import { ShoppingBag, User } from 'lucide-react'
 import Link from 'next/link'
 import { getCartItemCount } from '@/lib/cart.ts'
 import { getCustomer } from '@/lib/customer-session.ts'
+import type { ShopMenuItem } from '@/lib/shop.ts'
 import { AccountMenu } from './account-menu.tsx'
 import { MobileMenu, type NavLink } from './mobile-menu.tsx'
+
+const DEFAULT_NAV: NavLink[] = [
+  { href: '/products', label: 'สินค้า' },
+  { href: '/collections', label: 'คอลเลกชัน' },
+  { href: '/blog', label: 'บทความ' },
+]
 
 /**
  * Sticky site header — แสดงทุกหน้าผ่าน root layout
  *
  * Layout:
- *   - mobile: [≡] {Shop name} ··· [🛒(n)] [Avatar/Login]
- *   - desktop: {Shop name} [Products] [Collections] [Blog] ··· [🛒(n)] [Avatar/Login]
+ *   - mobile: [≡] {Logo|Name} ··· [🛒(n)] [Avatar/Login]
+ *   - desktop: {Logo|Name} [menu items...] ··· [🛒(n)] [Avatar/Login]
  *
- * Account avatar: ถ้ามี avatarUrl (เช่นจาก LINE/Google login) ใช้รูปจริง,
- * ไม่งั้น fallback เป็นตัวอักษรแรกของชื่อ/อีเมล
+ * Menu items: shop เลือกเองใน admin settings → settings.menu
+ * ถ้าไม่ตั้งจะใช้ default (สินค้า / คอลเลกชัน / บทความ)
+ *
+ * Logo: ถ้ามี logoUrl ใช้รูป, ไม่งั้นแสดงชื่อร้านเป็นข้อความ
  */
 export async function SiteHeader({
   shopId,
   shopName,
+  logoUrl,
+  menu,
 }: {
   shopId: string
   shopName: string
+  logoUrl: string | null
+  menu: ShopMenuItem[] | undefined
 }) {
   const [customer, cartCount] = await Promise.all([
     getCustomer(),
     getCartItemCount(shopId),
   ])
 
-  const navLinks: NavLink[] = [
-    { href: '/products', label: 'สินค้า' },
-    { href: '/collections', label: 'คอลเลกชัน' },
-    { href: '/blog', label: 'บทความ' },
-  ]
+  const navLinks: NavLink[] = menu && menu.length > 0 ? menu : DEFAULT_NAV
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -40,9 +49,21 @@ export async function SiteHeader({
 
         <Link
           href="/"
-          className="truncate text-base font-semibold tracking-tight"
+          className="flex shrink-0 items-center gap-2"
+          aria-label={shopName}
         >
-          {shopName}
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={shopName}
+              className="h-8 max-w-[140px] object-contain"
+            />
+          ) : (
+            <span className="truncate text-base font-semibold tracking-tight">
+              {shopName}
+            </span>
+          )}
         </Link>
 
         <nav className="ml-2 hidden items-center gap-1 md:flex">
