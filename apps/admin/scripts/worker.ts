@@ -63,6 +63,17 @@ async function main() {
     healthy = false
   })
 
+  // pg-boss v10: ต้อง createQueue() ก่อนใช้ — schedules มี FK ไป queue table
+  // createQueue idempotent ปลอดภัยรันซ้ำ
+  const allQueues = [
+    ...Object.values(QUEUES),
+    ...SCHEDULES.map((s) => s.queue),
+  ]
+  for (const q of allQueues) {
+    await boss.createQueue(q)
+  }
+  console.log('[worker] queues registered:', allQueues.join(', '))
+
   // ─── Queue subscribers ────────────────────────────────────────────────────
   await boss.work<ImageProcessJob>(QUEUES.imageProcess, { batchSize: 2 }, async (jobs) => {
     for (const job of jobs) await processImageJob(job.data)
