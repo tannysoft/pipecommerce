@@ -23,6 +23,7 @@ export const customers = pgTable(
     phone: text(),
     firstName: text(),
     lastName: text(),
+    avatarUrl: text(),
     acceptsMarketing: boolean().notNull().default(false),
     totalSpent: numeric({ precision: 12, scale: 2 }).notNull().default('0'),
     ordersCount: integer().notNull().default(0),

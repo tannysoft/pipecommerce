@@ -150,6 +150,9 @@ importers:
       '@pipecommerce/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.460.0
+        version: 0.460.0(react@19.2.5)
       next:
         specifier: ^16.0.0
         version: 16.2.4(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

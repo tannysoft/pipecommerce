@@ -11,6 +11,7 @@ export type CustomerSession = {
   email: string
   firstName: string | null
   lastName: string | null
+  avatarUrl: string | null
 }
 
 /**
@@ -33,6 +34,7 @@ export async function getCustomer(): Promise<CustomerSession | null> {
       email: customers.email,
       firstName: customers.firstName,
       lastName: customers.lastName,
+      avatarUrl: customers.avatarUrl,
     })
     .from(customers)
     .where(and(eq(customers.id, payload.customerId), eq(customers.shopId, shop.id)))
@@ -44,6 +46,7 @@ export async function getCustomer(): Promise<CustomerSession | null> {
     email: c.email ?? payload.email,
     firstName: c.firstName,
     lastName: c.lastName,
+    avatarUrl: c.avatarUrl,
   }
 }
 

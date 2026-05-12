@@ -1,5 +1,5 @@
-import { and, eq } from '@pipecommerce/db'
-import { carts } from '@pipecommerce/db/schema'
+import { and, eq, sql } from '@pipecommerce/db'
+import { cartItems, carts } from '@pipecommerce/db/schema'
 import { cookies } from 'next/headers'
 import { db } from './db.ts'
 
@@ -65,3 +65,22 @@ export async function getOrCreateCart(shopId: string, currency: string) {
   if (!created) throw new Error('failed to create cart')
   return created
 }
+
+/**
+ * Sum quantity ของ cart items ของ shop นี้ — สำหรับ header badge
+ * คืน 0 ถ้ายังไม่มี cart cookie
+ */
+export async function getCartItemCount(shopId: string): Promise<number> {
+  const store = await cookies()
+  const token = store.get(CART_COOKIE)?.value
+  if (!token) return 0
+
+  const [row] = await db
+    .select({ count: sql<number>`coalesce(sum(${cartItems.quantity}), 0)::int` })
+    .from(cartItems)
+    .innerJoin(carts, eq(cartItems.cartId, carts.id))
+    .where(and(eq(carts.shopId, shopId), eq(carts.token, token)))
+
+  return row?.count ?? 0
+}
+

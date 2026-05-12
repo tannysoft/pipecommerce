@@ -1,5 +1,6 @@
 'use client'
 
+import { LogOut, Package, User } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
@@ -7,6 +8,7 @@ export type AccountMenuCustomer = {
   email: string
   firstName: string | null
   lastName: string | null
+  avatarUrl: string | null
 }
 
 export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
@@ -41,10 +43,22 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+        className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-semibold text-primary-foreground transition hover:opacity-90"
         title={customer.email}
       >
-        {initial}
+        {customer.avatarUrl ? (
+          // Avatar จาก social provider (LINE/Google) — ใช้ <img> ตรงๆ
+          // เพราะ Next image optimization ถูกปิด (unoptimized: true)
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={customer.avatarUrl}
+            alt=""
+            className="size-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span>{initial}</span>
+        )}
       </button>
 
       {open ? (
@@ -63,7 +77,7 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
             >
-              <span aria-hidden>👤</span>
+              <User className="size-4" aria-hidden />
               บัญชีของฉัน
             </Link>
             <Link
@@ -72,7 +86,7 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
             >
-              <span aria-hidden>📦</span>
+              <Package className="size-4" aria-hidden />
               คำสั่งซื้อ
             </Link>
             <form action="/account/logout" method="post">
@@ -81,7 +95,7 @@ export function AccountMenu({ customer }: { customer: AccountMenuCustomer }) {
                 role="menuitem"
                 className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-accent"
               >
-                <span aria-hidden>🚪</span>
+                <LogOut className="size-4" aria-hidden />
                 ออกจากระบบ
               </button>
             </form>

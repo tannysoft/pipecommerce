@@ -91,7 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         {announcementBar ? <AnnouncementBar {...announcementBar} /> : null}
-        {shop ? <SiteHeader shopName={shop.name} /> : null}
+        {shop ? <SiteHeader shopId={shop.id} shopName={shop.name} /> : null}
         <div className="flex-1">{children}</div>
         {shop ? <SiteFooter shopName={shop.name} /> : null}
       </body>
