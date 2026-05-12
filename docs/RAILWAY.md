@@ -94,18 +94,33 @@ Config Path there).
 
 ## Cron jobs
 
-Railway's Cron feature runs a **command on schedule** — it doesn't curl URLs
-for you. We avoid creating 4 separate Cron services by running all schedules
-**inside the worker service** with `node-cron` (see `apps/admin/scripts/worker.ts`).
+All cron schedules run **inside the worker service** via `pg-boss schedule`
+(see `apps/admin/scripts/worker.ts`). Schedules persist in `pgboss.schedule`
+table — survive worker restart, deploy, crash.
 
-So with the worker service deployed, you get for free (UTC schedule):
-
-| Schedule | Task | ICT time |
+| Schedule (UTC) | Queue | ICT time |
 | --- | --- | --- |
-| `0 19 * * *` | report-snapshot | 02:00 |
-| `0 20 * * *` | loyalty-expire | 03:00 |
-| `0 21 * * *` | loyalty-reconcile | 04:00 |
-| `*/5 * * * *` | sync-hostnames | every 5 min |
+| `0 19 * * *` | cron-report-snapshot | 02:00 |
+| `0 20 * * *` | cron-loyalty-expire | 03:00 |
+| `0 21 * * *` | cron-loyalty-reconcile | 04:00 |
+| `*/5 * * * *` | cron-sync-hostnames | every 5 min |
+
+### Reliability (defense in depth)
+
+1. **Per-task try-catch** — one cron failing doesn't kill the worker process.
+2. **pg-boss retry** — if a scheduled job throws, pg-boss retries (3 by default)
+   with exponential backoff. Failed jobs land in `pgboss.archive` with the error.
+3. **DB-persistent schedules** — worker restart re-binds existing schedules;
+   no need to re-register. Missed runs while worker is down are simply skipped
+   (jobs are idempotent — see ON CONFLICT in report-snapshot, NOT EXISTS in
+   loyalty-expire).
+4. **Liveness probe** — worker runs a tiny HTTP server on `$PORT/health`
+   returning 200 only if pg-boss is alive and a `SELECT 1` against Postgres
+   succeeds. Railway healthchecks it every ~30s and auto-restarts after 3
+   consecutive failures (`healthcheckPath: /health`).
+5. **Railway restart policy** — `ON_FAILURE` with `max_retries: 10`. Process
+   crash, OOM kill, or unhandled rejection → Railway boots a fresh container
+   within seconds.
 
 ### Optional: external trigger (debugging / failover)
 
