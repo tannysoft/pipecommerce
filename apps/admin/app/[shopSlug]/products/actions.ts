@@ -24,7 +24,9 @@ function parseTags(raw: string): string[] {
   return [...new Set(list)].slice(0, 20)
 }
 
-export type CreateProductResult = { ok: true } | { ok: false; error: string }
+export type CreateProductResult =
+  | { ok: true; productId: string }
+  | { ok: false; error: string }
 
 export async function createProduct(
   shopSlug: string,
@@ -100,7 +102,9 @@ export async function createProduct(
     throw error
   }
 
-  redirect(`/${shopSlug}/products/${createdId}`)
+  revalidatePath(`/${shopSlug}/products`)
+  // ไม่ redirect ตรงนี้ — client form ต้องอัปโหลดรูปก่อนค่อยพา navigate
+  return { ok: true, productId: createdId }
 }
 
 export type UpdateProductResult = { ok: true } | { ok: false; error: string }

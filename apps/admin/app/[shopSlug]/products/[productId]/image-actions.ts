@@ -1,7 +1,7 @@
 'use server'
 
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { and, eq } from '@pipecommerce/db'
+import { and, asc, eq, isNull } from '@pipecommerce/db'
 import { productImages, products } from '@pipecommerce/db/schema'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db.ts'
@@ -44,6 +44,17 @@ export async function uploadProductImage(
     .limit(1)
   if (!product) return { ok: false, error: 'ไม่พบสินค้า' }
 
+  // Append ที่ position ถัดไป — รูปแรกได้ position 0 (= cover)
+  const positions = await db
+    .select({ position: productImages.position })
+    .from(productImages)
+    .where(
+      and(eq(productImages.productId, productId), isNull(productImages.deletedAt)),
+    )
+  const nextPosition = positions.length
+    ? Math.max(...positions.map((p) => p.position)) + 1
+    : 0
+
   const imageUuid = crypto.randomUUID()
   const r2Key = `shops/${shop.id}/orig/${imageUuid}.${ext}`
 
@@ -58,7 +69,6 @@ export async function uploadProductImage(
   )
 
   // ใน MVP ไม่มี variant pipeline → mark ready เลย ใช้ original ตรงๆ
-  // Phase ถัดไป (queue worker) จะ generate low/mid/high แล้ว update ตอนเสร็จ
   const [inserted] = await db
     .insert(productImages)
     .values({
@@ -68,6 +78,7 @@ export async function uploadProductImage(
       ext,
       r2KeyOrig: r2Key,
       bytes: file.size,
+      position: nextPosition,
       variantsStatus: 'ready',
     })
     .returning({ id: productImages.id })
@@ -106,6 +117,46 @@ export async function deleteProductImage(
     .update(productImages)
     .set({ deletedAt: new Date() })
     .where(eq(productImages.id, imageId))
+
+  revalidatePath(`/${shopSlug}/products/${productId}`)
+  return { ok: true }
+}
+
+/**
+ * Reorder รูปทั้งหมดด้วย array ของ imageIds — เรียงตามลำดับใน array
+ * ใช้ตอน drag-end หรือ up/down-arrow press
+ */
+export async function reorderProductImages(
+  shopSlug: string,
+  productId: string,
+  imageIds: string[],
+): Promise<{ ok: boolean }> {
+  const { shop } = await requireShop(shopSlug)
+
+  // verify ทุก image อยู่ใน product/shop จริง
+  const existing = await db
+    .select({ id: productImages.id })
+    .from(productImages)
+    .where(
+      and(
+        eq(productImages.productId, productId),
+        eq(productImages.shopId, shop.id),
+        isNull(productImages.deletedAt),
+      ),
+    )
+    .orderBy(asc(productImages.position))
+  const validIds = new Set(existing.map((r) => r.id))
+  if (imageIds.some((id) => !validIds.has(id))) return { ok: false }
+  if (imageIds.length !== existing.length) return { ok: false }
+
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < imageIds.length; i++) {
+      await tx
+        .update(productImages)
+        .set({ position: i, updatedAt: new Date() })
+        .where(eq(productImages.id, imageIds[i]!))
+    }
+  })
 
   revalidatePath(`/${shopSlug}/products/${productId}`)
   return { ok: true }

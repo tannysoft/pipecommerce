@@ -12,6 +12,7 @@ import { db } from '@/lib/db.ts'
 import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
 import { AddToCartButton } from './add-to-cart-button.tsx'
+import { ProductGallery } from './product-gallery.tsx'
 import { VariantSelector } from './variant-selector.tsx'
 
 const fmtBaht = (raw: string) =>
@@ -88,33 +89,14 @@ export default async function ProductDetailPage({
       </Link>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="space-y-2">
-          {images.length > 0 ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={publicImageUrl(images[0]!.r2KeyOrig)}
-                alt={images[0]!.alt ?? product.title}
-                className="aspect-square w-full rounded-xl border object-cover"
-              />
-              {images.length > 1 ? (
-                <div className="grid grid-cols-4 gap-2">
-                  {images.slice(0, 4).map((img) => (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      key={img.id}
-                      src={publicImageUrl(img.r2KeyOrig)}
-                      alt={img.alt ?? product.title}
-                      className="aspect-square w-full rounded-lg border object-cover"
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="aspect-square rounded-xl border bg-muted" />
-          )}
-        </div>
+        <ProductGallery
+          title={product.title}
+          images={images.map((img) => ({
+            id: img.id,
+            url: publicImageUrl(img.r2KeyOrig),
+            alt: img.alt,
+          }))}
+        />
 
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">{product.title}</h1>
