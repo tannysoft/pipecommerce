@@ -5,6 +5,7 @@ import { and, asc, eq, isNull } from '@pipecommerce/db'
 import { productImages, products } from '@pipecommerce/db/schema'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db.ts'
+import { getQueue, QUEUES } from '@/lib/queue.ts'
 import { r2, R2_BUCKET } from '@/lib/r2.ts'
 import { requireShop } from '@/lib/shop.ts'
 
@@ -68,7 +69,8 @@ export async function uploadProductImage(
     }),
   )
 
-  // ใน MVP ไม่มี variant pipeline → mark ready เลย ใช้ original ตรงๆ
+  // Insert ที่สถานะ pending — worker จะ generate variants async
+  // ถ้า pg-boss ยังไม่ start ก็ fallback เป็น ready (serve original)
   const [inserted] = await db
     .insert(productImages)
     .values({
@@ -79,9 +81,25 @@ export async function uploadProductImage(
       r2KeyOrig: r2Key,
       bytes: file.size,
       position: nextPosition,
-      variantsStatus: 'ready',
+      variantsStatus: 'pending',
     })
     .returning({ id: productImages.id })
+
+  // Enqueue image-process job — fail-safe ถ้า queue ไม่ available
+  try {
+    const boss = await getQueue()
+    await boss.send(QUEUES.imageProcess, {
+      imageId: inserted!.id,
+      r2Key,
+      shopId: shop.id,
+    })
+  } catch (err) {
+    console.error('[image-actions] enqueue failed, falling back to ready:', err)
+    await db
+      .update(productImages)
+      .set({ variantsStatus: 'ready' })
+      .where(eq(productImages.id, inserted!.id))
+  }
 
   revalidatePath(`/${shopSlug}/products/${productId}`)
   return { ok: true, imageId: inserted!.id }

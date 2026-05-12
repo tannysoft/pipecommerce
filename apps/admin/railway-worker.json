@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railpack.com/schema.json",
+  "build": {
+    "buildCommand": "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pipecommerce/admin... build"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @pipecommerce/admin worker",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

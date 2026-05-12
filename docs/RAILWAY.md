@@ -59,6 +59,54 @@ commands manually:
 | `AUTH_URL` | `https://console.pipecommerce.com` |
 | `AUTH_TRUST_HOST` | `true` |
 
+### Admin only (cron + queue + CF for SaaS)
+
+| Var | Value |
+| --- | --- |
+| `CRON_SECRET` | `openssl rand -base64 32` — Railway Cron Bearer token |
+| `CF_ACCOUNT_ID` | Cloudflare account ID |
+| `CF_ZONE_ID` | Zone ID of `pipecommerce.com` |
+| `CF_API_TOKEN` | Token with `Zone:SSL and Certificates:Edit` permission |
+| `CF_FALLBACK_ORIGIN` | Railway storefront public domain (e.g. `storefront-production.up.railway.app`) |
+
+### Optional (both apps)
+
+| Var | Value |
+| --- | --- |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (no-op if absent) |
+| `BEAM_API_KEY` | Beam production key (leave blank for dev stub) |
+| `BEAM_WEBHOOK_SECRET` | HMAC secret from Beam dashboard — **required in prod** |
+
+## Worker service (separate Railway service)
+
+The admin app has a background worker process for image-resize + email queue
++ webhook delivery. **Create a third Railway service** pointing at the same
+repo:
+
+- **Build command:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pipecommerce/admin... build`
+- **Start command:** `pnpm --filter @pipecommerce/admin worker`
+- **Variables:** same as `admin` service (uses the same `DATABASE_URL`, `R2_*`,
+  `RESEND_*`). Add a `Reference` to admin's variables or copy.
+- **No public domain** needed — internal worker only.
+
+Or use the config-as-code file `apps/admin/railway-worker.json` (point service
+Config Path there).
+
+## Railway Cron
+
+For scheduled jobs, configure Railway Cron with `Authorization: Bearer
+${{shared.CRON_SECRET}}` header (or admin's `CRON_SECRET` ref).
+
+| Schedule | URL | Purpose |
+| --- | --- | --- |
+| `0 19 * * *` (02:00 ICT) | `https://console.pipecommerce.com/api/cron/report-snapshot` | Pre-aggregate yesterday's sales |
+| `0 20 * * *` (03:00 ICT) | `https://console.pipecommerce.com/api/cron/loyalty-expire` | Expire loyalty points |
+| `0 21 * * *` (04:00 ICT) | `https://console.pipecommerce.com/api/cron/loyalty-reconcile` | Recalc balance cache |
+| `*/5 * * * *` | `https://console.pipecommerce.com/api/cron/sync-hostnames` | Poll CF for SSL status |
+
+All cron endpoints return 401 without the `CRON_SECRET` and 503 if it's not
+configured server-side.
+
 ## DNS (Cloudflare)
 
 After Railway gives each service a public domain (e.g. `admin-production.up.railway.app`),

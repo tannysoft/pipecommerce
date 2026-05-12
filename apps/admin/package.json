@@ -7,6 +7,7 @@
     "dev": "next dev --turbopack -p 3001",
     "build": "next build",
     "start": "next start -p ${PORT:-3001}",
+    "worker": "node --experimental-strip-types scripts/worker.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -21,6 +22,8 @@
     "@pipecommerce/db": "workspace:*",
     "@pipecommerce/ui": "workspace:*",
     "@sentry/nextjs": "^8.45.0",
+    "pg-boss": "^10.1.5",
+    "sharp": "^0.33.5",
     "@tiptap/core": "^3.0.0",
     "@tiptap/extension-image": "^3.0.0",
     "@tiptap/extension-link": "^3.0.0",

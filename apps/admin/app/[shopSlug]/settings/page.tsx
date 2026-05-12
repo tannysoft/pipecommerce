@@ -19,6 +19,11 @@ const settingsLinks = [
     description: 'ติดตั้ง Google Analytics 4 + Meta (Facebook) Pixel',
   },
   {
+    href: 'domains',
+    title: 'Custom domains',
+    description: 'ใช้ domain ของคุณเอง เช่น narakshop.com (Cloudflare for SaaS)',
+  },
+  {
     href: 'typography',
     title: 'Typography',
     description: 'เลือก font ของ storefront — heading + body (Google Fonts ฟรี)',

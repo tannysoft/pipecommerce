@@ -2,3 +2,6 @@ packages:
   - 'apps/*'
   - 'apps/workers/*'
   - 'packages/*'
+allowBuilds:
+  '@sentry/cli': false
+  sharp: false
