@@ -2,11 +2,10 @@
 
 import { and, eq } from '@pipecommerce/db'
 import { orders, payments } from '@pipecommerce/db/schema'
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { sendPaymentReceipt } from '@/lib/email.ts'
-import { requireShopFromHost } from '@/lib/shop.ts'
+import { buildAbsoluteUrl, requireShopFromHost } from '@/lib/shop.ts'
 
 /**
  * Stub-mode payment simulator — สำหรับ dev เท่านั้น
@@ -72,10 +71,9 @@ export async function simulatePayment(
   // Receipt email — fire-and-forget
   if (order.email) {
     try {
-      const headersList = await headers()
-      const host = headersList.get('host') ?? ''
-      const proto = headersList.get('x-forwarded-proto') ?? 'http'
-      const trackingUrl = `${proto}://${host}/orders/${order.orderNumber}?token=${trackingToken}`
+      const trackingUrl = await buildAbsoluteUrl(
+        `/orders/${order.orderNumber}?token=${trackingToken}`,
+      )
       await sendPaymentReceipt({
         to: order.email,
         shop: { name: shop.name, currency: shop.currency },

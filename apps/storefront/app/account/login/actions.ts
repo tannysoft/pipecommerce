@@ -1,9 +1,8 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { buildMagicLinkToken } from '@/lib/customer-auth.ts'
 import { sendMagicLink } from '@/lib/email.ts'
-import { requireShopFromHost } from '@/lib/shop.ts'
+import { buildAbsoluteUrl, requireShopFromHost } from '@/lib/shop.ts'
 
 export type RequestMagicLinkResult = { ok: true } | { ok: false; error: string }
 
@@ -23,10 +22,9 @@ export async function requestMagicLink(
 
   const token = await buildMagicLinkToken({ shopId: shop.id, email })
 
-  const headersList = await headers()
-  const host = headersList.get('host') ?? ''
-  const proto = headersList.get('x-forwarded-proto') ?? 'http'
-  const link = `${proto}://${host}/account/verify?token=${encodeURIComponent(token)}`
+  const link = await buildAbsoluteUrl(
+    `/account/verify?token=${encodeURIComponent(token)}`,
+  )
 
   try {
     await sendMagicLink({

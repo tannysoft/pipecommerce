@@ -12,13 +12,13 @@ import {
   productVariants,
   products,
 } from '@pipecommerce/db/schema'
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createPaymentLink } from '@/lib/beam.ts'
 import { CART_COOKIE, getCartByToken } from '@/lib/cart.ts'
 import { db } from '@/lib/db.ts'
 import { sendOrderConfirmation } from '@/lib/email.ts'
-import { requireShopFromHost } from '@/lib/shop.ts'
+import { buildAbsoluteUrl, requireShopFromHost } from '@/lib/shop.ts'
 
 export type CheckoutResult = { ok: true } | { ok: false; error: string }
 
@@ -322,11 +322,10 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
   store.delete(CART_COOKIE)
 
   // Build payment link via Beam (stub mode = redirect to internal /pay page)
-  const headersList = await headers()
-  const host = headersList.get('host') ?? ''
-  const proto = headersList.get('x-forwarded-proto') ?? 'http'
-  const origin = `${proto}://${host}`
-  const trackingUrl = `${origin}/orders/${orderNumber}?token=${trackingToken}`
+  const trackingUrl = await buildAbsoluteUrl(
+    `/orders/${orderNumber}?token=${trackingToken}`,
+  )
+  const webhookUrl = await buildAbsoluteUrl('/api/webhooks/beam')
 
   // Order confirmation email — fire-and-forget (don't block checkout if email fails)
   try {
@@ -360,7 +359,7 @@ export async function placeOrder(formData: FormData): Promise<CheckoutResult> {
     orderNumber,
     description: `Order #${orderNumber} — ${shop.name}`,
     returnUrl: trackingUrl,
-    webhookUrl: `${origin}/api/webhooks/beam`,
+    webhookUrl,
   })
 
   redirect(paymentLink.url)

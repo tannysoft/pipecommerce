@@ -107,12 +107,32 @@ export const lookupShopByHost = cache(
  */
 export async function resolveShopHost(): Promise<string | null> {
   const h = await headers()
-  const raw = (h.get('x-shop-host') ?? h.get('host') ?? '').toLowerCase()
+  // Railway/CF/proxy: x-forwarded-host = user-facing hostname,
+  // `host` = internal container hostname (เช่น localhost:8080)
+  const raw = (
+    h.get('x-shop-host') ??
+    h.get('x-forwarded-host') ??
+    h.get('host') ??
+    ''
+  ).toLowerCase()
   const host = raw.replace(/:\d+$/, '')
   if (!host) return null
   if (host === PLATFORM_DOMAIN || host === `www.${PLATFORM_DOMAIN}`) return null
   if (host.startsWith('admin.') || host.startsWith('console.')) return null
   return host
+}
+
+/**
+ * Build absolute URL จาก request — สำหรับ magic link, payment redirect, ฯลฯ
+ * อ่าน x-forwarded-host/proto จาก Railway proxy ก่อน fallback `host`/`http`
+ */
+export async function buildAbsoluteUrl(pathAndQuery: string): Promise<string> {
+  const h = await headers()
+  const host =
+    h.get('x-forwarded-host') ?? h.get('host') ?? `${PLATFORM_DOMAIN}`
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  const path = pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`
+  return `${proto}://${host}${path}`
 }
 
 /**
