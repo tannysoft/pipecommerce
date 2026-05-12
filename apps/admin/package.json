@@ -20,6 +20,7 @@
     "@hookform/resolvers": "^3.9.1",
     "@pipecommerce/db": "workspace:*",
     "@pipecommerce/ui": "workspace:*",
+    "@sentry/nextjs": "^8.45.0",
     "@tiptap/core": "^3.0.0",
     "@tiptap/extension-image": "^3.0.0",
     "@tiptap/extension-link": "^3.0.0",

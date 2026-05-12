@@ -79,16 +79,78 @@ export async function createPaymentLink(
 }
 
 /**
- * Verify webhook signature ด้วย HMAC-SHA256
- * (Beam ส่ง X-Beam-Signature header)
+ * Verify Beam webhook signature ด้วย HMAC-SHA256
  *
- * Stub: ไม่ verify ใน dev — production จะใช้ Web Crypto API ของ Workers/Node
+ * Header format ที่รองรับ:
+ *   1. plain hex/base64 ของ HMAC-SHA256(rawBody, secret)
+ *   2. Stripe-style "t=<unix_ts>,v1=<hex>" — เพิ่ม replay protection 5 นาที
+ *      (signature payload = "{ts}.{rawBody}")
+ *
+ * ใน dev: ถ้าไม่ตั้ง BEAM_WEBHOOK_SECRET → return true (trust all)
+ * ใน prod: ต้องตั้ง secret ไม่งั้นจะ reject ทุก request
  */
+const REPLAY_WINDOW_SECONDS = 5 * 60
+
 export async function verifyWebhookSignature(
-  _rawBody: string,
-  _signature: string | null,
+  rawBody: string,
+  signature: string | null,
 ): Promise<boolean> {
-  if (!process.env.BEAM_WEBHOOK_SECRET) return true // dev: trust all
-  // TODO: implement HMAC verify
-  return true
+  const secret = process.env.BEAM_WEBHOOK_SECRET
+  if (!secret) {
+    // Production ที่ลืมตั้ง secret = อันตราย — reject เลย
+    if (process.env.NODE_ENV === 'production') return false
+    return true
+  }
+  if (!signature) return false
+
+  // Parse Stripe-style header if present
+  let ts: number | null = null
+  let providedSig = signature.trim()
+  if (signature.includes('t=') && signature.includes('v1=')) {
+    const parts = Object.fromEntries(
+      signature.split(',').map((kv) => {
+        const [k, v] = kv.split('=', 2)
+        return [k!.trim(), v?.trim() ?? '']
+      }),
+    )
+    const tsRaw = parts.t
+    const v1 = parts.v1
+    if (!tsRaw || !v1) return false
+    ts = Number(tsRaw)
+    if (!Number.isFinite(ts)) return false
+    providedSig = v1
+  }
+
+  // Replay protection
+  if (ts !== null) {
+    const nowSec = Math.floor(Date.now() / 1000)
+    if (Math.abs(nowSec - ts) > REPLAY_WINDOW_SECONDS) return false
+  }
+
+  const payload = ts !== null ? `${ts}.${rawBody}` : rawBody
+  const expected = await computeHmacHex(secret, payload)
+
+  return constantTimeEqual(providedSig.toLowerCase(), expected.toLowerCase())
+}
+
+async function computeHmacHex(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const sigBytes = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(data)))
+  let hex = ''
+  for (const b of sigBytes) hex += b.toString(16).padStart(2, '0')
+  return hex
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
 }

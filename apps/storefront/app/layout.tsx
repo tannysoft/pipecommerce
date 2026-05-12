@@ -2,6 +2,7 @@ import { eq } from '@pipecommerce/db'
 import { shopAnnouncementBars } from '@pipecommerce/db/schema'
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
+import { AnalyticsScripts } from '@/app/_components/analytics-scripts.tsx'
 import { AnnouncementBar } from '@/app/_components/announcement-bar.tsx'
 import { SiteFooter } from '@/app/_components/site-footer.tsx'
 import { SiteHeader } from '@/app/_components/site-header.tsx'
@@ -100,6 +101,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {!sameUrl ? <link rel="stylesheet" href={fonts.headingUrl} /> : null}
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
+        {shop?.settings.analytics ? (
+          <AnalyticsScripts analytics={shop.settings.analytics} />
+        ) : null}
         {announcementBar ? <AnnouncementBar {...announcementBar} /> : null}
         {shop ? (
           <SiteHeader

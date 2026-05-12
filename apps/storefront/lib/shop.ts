@@ -16,6 +16,11 @@ const SUBDOMAIN_SUFFIXES = [`.${PLATFORM_DOMAIN}`, '.localhost']
 
 export type ShopMenuItem = { label: string; href: string }
 
+export type ShopAnalytics = {
+  ga4MeasurementId?: string | null // "G-XXXXXXXXXX"
+  metaPixelId?: string | null // numeric string
+}
+
 export type ShopSettings = {
   fonts?: { heading?: string; body?: string }
   tax?: {
@@ -28,6 +33,7 @@ export type ShopSettings = {
     freeThreshold?: number | null
   }
   menu?: ShopMenuItem[]
+  analytics?: ShopAnalytics
   // อื่นๆ ที่จะเพิ่มภายหลัง — seo, robots_txt, ฯลฯ
   [k: string]: unknown
 }

@@ -7,9 +7,15 @@ import { db } from './db.ts'
 
 export type ShopMenuItem = { label: string; href: string }
 
+export type ShopAnalytics = {
+  ga4MeasurementId?: string | null
+  metaPixelId?: string | null
+}
+
 export type ShopSettings = {
   fonts?: { heading?: string; body?: string }
   menu?: ShopMenuItem[]
+  analytics?: ShopAnalytics
   [k: string]: unknown
 }
 

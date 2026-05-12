@@ -14,6 +14,11 @@ const settingsLinks = [
     description: 'จัดการเมนูที่แสดงใน header ของ storefront',
   },
   {
+    href: 'analytics',
+    title: 'Analytics',
+    description: 'ติดตั้ง Google Analytics 4 + Meta (Facebook) Pixel',
+  },
+  {
     href: 'typography',
     title: 'Typography',
     description: 'เลือก font ของ storefront — heading + body (Google Fonts ฟรี)',
