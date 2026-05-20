@@ -27,7 +27,7 @@ import {
   SelectValue,
   Textarea,
 } from '@pipecommerce/ui'
-import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { ConfirmDialog } from '../../../_components/confirm-dialog.tsx'
 import { ImageUploadField } from '../../../_components/image-upload-field.tsx'
@@ -560,7 +560,256 @@ function SectionForm({
     )
   }
 
+  if (section.type === 'faq') {
+    const items = (s.items as Array<{ question: string; answer: string }>) ?? []
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">FAQ</p>
+        <Field label="Headline">
+          <Input
+            value={(s.headline as string) ?? ''}
+            onChange={(e) => set('headline', e.target.value)}
+          />
+        </Field>
+        <ItemListEditor
+          items={items}
+          onChange={(next) => set('items', next)}
+          empty={{ question: '', answer: '' }}
+          render={(item, idx, update) => (
+            <>
+              <Input
+                placeholder="คำถาม"
+                value={item.question}
+                onChange={(e) => update(idx, { ...item, question: e.target.value })}
+              />
+              <Textarea
+                rows={2}
+                placeholder="คำตอบ"
+                value={item.answer}
+                onChange={(e) => update(idx, { ...item, answer: e.target.value })}
+              />
+            </>
+          )}
+        />
+      </div>
+    )
+  }
+
+  if (section.type === 'testimonials') {
+    const items =
+      (s.items as Array<{ name: string; role?: string; quote: string; avatarUrl?: string }>) ??
+      []
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Testimonials</p>
+        <Field label="Headline">
+          <Input
+            value={(s.headline as string) ?? ''}
+            onChange={(e) => set('headline', e.target.value)}
+          />
+        </Field>
+        <ItemListEditor
+          items={items}
+          onChange={(next) => set('items', next)}
+          empty={{ name: '', quote: '' }}
+          render={(item, idx, update) => (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="ชื่อ"
+                  value={item.name}
+                  onChange={(e) => update(idx, { ...item, name: e.target.value })}
+                />
+                <Input
+                  placeholder="ตำแหน่ง (ไม่บังคับ)"
+                  value={item.role ?? ''}
+                  onChange={(e) => update(idx, { ...item, role: e.target.value })}
+                />
+              </div>
+              <Textarea
+                rows={2}
+                placeholder="คำพูด"
+                value={item.quote}
+                onChange={(e) => update(idx, { ...item, quote: e.target.value })}
+              />
+              <ImageUploadField
+                shopSlug={shopSlug}
+                value={item.avatarUrl ?? ''}
+                onChange={(url) => update(idx, { ...item, avatarUrl: url })}
+                label="avatar"
+              />
+            </>
+          )}
+        />
+      </div>
+    )
+  }
+
+  if (section.type === 'imageGrid') {
+    const items =
+      (s.items as Array<{ imageUrl: string; link?: string; alt?: string }>) ?? []
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Image grid</p>
+        <Field label="Headline (ไม่บังคับ)">
+          <Input
+            value={(s.headline as string) ?? ''}
+            onChange={(e) => set('headline', e.target.value)}
+          />
+        </Field>
+        <Field label="คอลัมน์">
+          <Select
+            value={String((s.columns as number) ?? 3)}
+            onValueChange={(v) => set('columns', Number(v))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2 คอลัมน์</SelectItem>
+              <SelectItem value="3">3 คอลัมน์</SelectItem>
+              <SelectItem value="4">4 คอลัมน์</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <ItemListEditor
+          items={items}
+          onChange={(next) => set('items', next)}
+          empty={{ imageUrl: '' }}
+          render={(item, idx, update) => (
+            <>
+              <ImageUploadField
+                shopSlug={shopSlug}
+                value={item.imageUrl}
+                onChange={(url) => update(idx, { ...item, imageUrl: url })}
+                label="image"
+              />
+              <Input
+                placeholder="Link URL (ไม่บังคับ)"
+                value={item.link ?? ''}
+                onChange={(e) => update(idx, { ...item, link: e.target.value })}
+              />
+              <Input
+                placeholder="Alt text"
+                value={item.alt ?? ''}
+                onChange={(e) => update(idx, { ...item, alt: e.target.value })}
+              />
+            </>
+          )}
+        />
+      </div>
+    )
+  }
+
+  if (section.type === 'newsletter') {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">Newsletter</p>
+        <Field label="Headline">
+          <Input
+            value={(s.headline as string) ?? ''}
+            onChange={(e) => set('headline', e.target.value)}
+          />
+        </Field>
+        <Field label="คำอธิบาย">
+          <Input
+            value={(s.subheadline as string) ?? ''}
+            onChange={(e) => set('subheadline', e.target.value)}
+          />
+        </Field>
+        <Field label="ข้อความปุ่ม">
+          <Input
+            value={(s.buttonText as string) ?? ''}
+            onChange={(e) => set('buttonText', e.target.value)}
+          />
+        </Field>
+      </div>
+    )
+  }
+
   return null
+}
+
+function ItemListEditor<T>({
+  items,
+  onChange,
+  empty,
+  render,
+}: {
+  items: T[]
+  onChange: (next: T[]) => void
+  empty: T
+  render: (item: T, idx: number, update: (idx: number, next: T) => void) => React.ReactNode
+}) {
+  function update(idx: number, next: T) {
+    onChange(items.map((it, i) => (i === idx ? next : it)))
+  }
+  function add() {
+    onChange([...items, { ...empty }])
+  }
+  function remove(idx: number) {
+    onChange(items.filter((_, i) => i !== idx))
+  }
+  function move(idx: number, delta: -1 | 1) {
+    const j = idx + delta
+    if (j < 0 || j >= items.length) return
+    const next = items.slice()
+    ;[next[idx], next[j]] = [next[j]!, next[idx]!]
+    onChange(next)
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, idx) => (
+        <div
+          key={idx}
+          className="space-y-2 rounded-md border bg-muted/30 p-3"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              ลำดับที่ {idx + 1}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => move(idx, -1)}
+                disabled={idx === 0}
+                aria-label="ขึ้น"
+              >
+                <ArrowUp className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => move(idx, 1)}
+                disabled={idx === items.length - 1}
+                aria-label="ลง"
+              >
+                <ArrowDown className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => remove(idx)}
+                aria-label="ลบ"
+              >
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
+            </div>
+          </div>
+          {render(item, idx, update)}
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={add}>
+        <Plus className="mr-1 size-4" />
+        เพิ่มรายการ
+      </Button>
+    </div>
+  )
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

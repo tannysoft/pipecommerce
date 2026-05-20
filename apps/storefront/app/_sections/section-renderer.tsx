@@ -35,7 +35,166 @@ export async function SectionRenderer({
       return <TextBlockBlock section={section} />
     case 'imageBanner':
       return <ImageBannerBlock section={section} />
+    case 'faq':
+      return <FaqBlock section={section} />
+    case 'testimonials':
+      return <TestimonialsBlock section={section} />
+    case 'imageGrid':
+      return <ImageGridBlock section={section} />
+    case 'newsletter':
+      return <NewsletterBlock section={section} />
   }
+}
+
+function FaqBlock({ section }: { section: Extract<Section, { type: 'faq' }> }) {
+  const s = section.settings
+  const items = s.items ?? []
+  if (items.length === 0) return null
+  return (
+    <section className="mx-auto max-w-3xl px-6 py-12">
+      {s.headline ? (
+        <h2 className="mb-6 text-center text-2xl font-bold md:text-3xl">{s.headline}</h2>
+      ) : null}
+      <div className="space-y-3">
+        {items.map((item, i) => (
+          <details key={i} className="group rounded-lg border bg-background p-4">
+            <summary className="cursor-pointer list-none font-medium marker:hidden">
+              <span className="flex items-center justify-between gap-2">
+                <span>{item.question}</span>
+                <span className="text-muted-foreground transition group-open:rotate-180">
+                  ⌄
+                </span>
+              </span>
+            </summary>
+            <div className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+              {item.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function TestimonialsBlock({
+  section,
+}: {
+  section: Extract<Section, { type: 'testimonials' }>
+}) {
+  const s = section.settings
+  const items = s.items ?? []
+  if (items.length === 0) return null
+  return (
+    <section className="mx-auto max-w-5xl px-6 py-12">
+      {s.headline ? (
+        <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">{s.headline}</h2>
+      ) : null}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {items.map((item, i) => (
+          <div key={i} className="rounded-lg border bg-card p-6">
+            <p className="italic text-muted-foreground">&ldquo;{item.quote}&rdquo;</p>
+            <div className="mt-4 flex items-center gap-3">
+              {item.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.avatarUrl}
+                  alt={item.name}
+                  className="size-10 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex size-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                  {item.name[0]?.toUpperCase() ?? '?'}
+                </span>
+              )}
+              <div>
+                <p className="text-sm font-medium">{item.name}</p>
+                {item.role ? (
+                  <p className="text-xs text-muted-foreground">{item.role}</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ImageGridBlock({
+  section,
+}: {
+  section: Extract<Section, { type: 'imageGrid' }>
+}) {
+  const s = section.settings
+  const items = s.items ?? []
+  const cols = s.columns ?? 3
+  if (items.length === 0) return null
+  const gridClass =
+    cols === 2 ? 'sm:grid-cols-2' : cols === 4 ? 'sm:grid-cols-2 md:grid-cols-4' : 'sm:grid-cols-3'
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-12">
+      {s.headline ? (
+        <h2 className="mb-6 text-center text-2xl font-bold md:text-3xl">{s.headline}</h2>
+      ) : null}
+      <div className={`grid grid-cols-1 gap-4 ${gridClass}`}>
+        {items.map((item, i) => {
+          const img = (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.imageUrl}
+              alt={item.alt ?? ''}
+              loading="lazy"
+              className="aspect-square w-full rounded-lg object-cover transition hover:scale-[1.02]"
+            />
+          )
+          return item.link ? (
+            <Link key={i} href={item.link} className="block">
+              {img}
+            </Link>
+          ) : (
+            <div key={i}>{img}</div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function NewsletterBlock({
+  section,
+}: {
+  section: Extract<Section, { type: 'newsletter' }>
+}) {
+  const s = section.settings
+  return (
+    <section className="mx-auto max-w-2xl px-6 py-16 text-center">
+      {s.headline ? (
+        <h2 className="text-2xl font-bold md:text-3xl">{s.headline}</h2>
+      ) : null}
+      {s.subheadline ? (
+        <p className="mt-2 text-muted-foreground">{s.subheadline}</p>
+      ) : null}
+      <form
+        action="/api/newsletter/subscribe"
+        method="post"
+        className="mx-auto mt-6 flex max-w-md gap-2"
+      >
+        <input
+          type="email"
+          name="email"
+          required
+          placeholder="your@email.com"
+          className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          className="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          {s.buttonText ?? 'สมัคร'}
+        </button>
+      </form>
+    </section>
+  )
 }
 
 function HeroBlock({ section }: { section: Extract<Section, { type: 'hero' }> }) {
