@@ -11,8 +11,11 @@ import { notFound } from 'next/navigation'
 import { db } from '@/lib/db.ts'
 import { publicImageUrl } from '@/lib/image.ts'
 import { requireShopFromHost } from '@/lib/shop.ts'
+import { RecentlyViewed } from '@/app/_components/recently-viewed.tsx'
+import { RecentlyViewedTracker } from '@/app/_components/recently-viewed-tracker.tsx'
 import { AddToCartButton } from './add-to-cart-button.tsx'
 import { ProductGallery } from './product-gallery.tsx'
+import { RelatedProducts } from './related-products.tsx'
 import { VariantSelector } from './variant-selector.tsx'
 
 const fmtBaht = (raw: string) =>
@@ -164,6 +167,21 @@ export default async function ProductDetailPage({
           </p>
         </div>
       </div>
+
+      <RelatedProducts
+        shopId={shop.id}
+        shopCurrency={shop.currency}
+        productId={product.id}
+        tags={product.tags}
+      />
+
+      <RecentlyViewed
+        shopId={shop.id}
+        shopCurrency={shop.currency}
+        excludeHandle={product.handle}
+      />
+
+      <RecentlyViewedTracker handle={product.handle} />
     </main>
   )
 }

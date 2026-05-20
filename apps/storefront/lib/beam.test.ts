@@ -26,7 +26,7 @@ async function computeHmac(secret: string, data: string): Promise<string> {
 describe('verifyWebhookSignature', () => {
   beforeEach(() => {
     process.env.BEAM_WEBHOOK_SECRET = SECRET
-    process.env.NODE_ENV = 'test'
+    ;(process.env as Record<string, string>).NODE_ENV = 'test'
   })
 
   it('accepts plain hex signature when correct', async () => {
