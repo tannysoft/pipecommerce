@@ -1,8 +1,13 @@
-import { and, eq, isNotNull, sql } from '@pipecommerce/db'
+import { and, eq, gte, isNotNull, lt, lte, sql } from '@pipecommerce/db'
 import {
   customerLoyalty,
   loyaltyLedger,
+  reportEmailSubscriptions,
+  reportSnapshotsDaily,
   shopDomains,
+  shops,
+  webhookDeliveries,
+  webhooks,
 } from '@pipecommerce/db/schema'
 import {
   getCustomHostname,
@@ -228,6 +233,251 @@ export async function runReportSnapshot(): Promise<{ shops: number }> {
     RETURNING shop_id
   `)
   return { shops: result.length }
+}
+
+/**
+ * Process pending webhook deliveries with exponential backoff
+ * Stages: 1m → 5m → 30m → 2h → 12h → 24h → fail
+ */
+const BACKOFF_MINUTES = [1, 5, 30, 2 * 60, 12 * 60, 24 * 60]
+const MAX_ATTEMPTS = BACKOFF_MINUTES.length
+
+export async function runWebhookDeliveries(): Promise<{
+  attempted: number
+  succeeded: number
+  failed: number
+  retrying: number
+}> {
+  const now = new Date()
+  const pending = await db
+    .select({
+      delivery: webhookDeliveries,
+      webhookUrl: webhooks.url,
+      webhookSecret: webhooks.secret,
+      webhookActive: webhooks.isActive,
+    })
+    .from(webhookDeliveries)
+    .innerJoin(webhooks, eq(webhookDeliveries.webhookId, webhooks.id))
+    .where(
+      and(
+        eq(webhookDeliveries.status, 'pending'),
+        lte(webhookDeliveries.nextRetryAt, now),
+      ),
+    )
+    .limit(100)
+
+  let succeeded = 0
+  let retrying = 0
+  let failed = 0
+
+  for (const row of pending) {
+    const d = row.delivery
+    if (!row.webhookActive) {
+      await db
+        .update(webhookDeliveries)
+        .set({ status: 'failed', responseBody: 'webhook disabled' })
+        .where(eq(webhookDeliveries.id, d.id))
+      failed++
+      continue
+    }
+
+    const body = JSON.stringify({ topic: d.topic, payload: d.payload })
+    const ts = Math.floor(Date.now() / 1000)
+    const signature = await computeWebhookHmac(row.webhookSecret, `${ts}.${body}`)
+
+    let responseCode: number | null = null
+    let responseBody: string | null = null
+    let ok = false
+    try {
+      const res = await fetch(row.webhookUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-pipecommerce-topic': d.topic,
+          'x-pipecommerce-signature': `t=${ts},v1=${signature}`,
+        },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      })
+      responseCode = res.status
+      responseBody = (await res.text()).slice(0, 1000)
+      ok = res.ok
+    } catch (err) {
+      responseBody = err instanceof Error ? err.message : 'fetch failed'
+    }
+
+    const attempts = d.attempts + 1
+    if (ok) {
+      await db
+        .update(webhookDeliveries)
+        .set({
+          status: 'success',
+          attempts,
+          responseCode,
+          responseBody,
+          deliveredAt: new Date(),
+          nextRetryAt: null,
+        })
+        .where(eq(webhookDeliveries.id, d.id))
+      succeeded++
+    } else if (attempts >= MAX_ATTEMPTS) {
+      await db
+        .update(webhookDeliveries)
+        .set({
+          status: 'failed',
+          attempts,
+          responseCode,
+          responseBody,
+        })
+        .where(eq(webhookDeliveries.id, d.id))
+      failed++
+    } else {
+      const nextRetryMin = BACKOFF_MINUTES[attempts - 1] ?? 60
+      const nextRetryAt = new Date(Date.now() + nextRetryMin * 60 * 1000)
+      await db
+        .update(webhookDeliveries)
+        .set({
+          status: 'pending',
+          attempts,
+          responseCode,
+          responseBody,
+          nextRetryAt,
+        })
+        .where(eq(webhookDeliveries.id, d.id))
+      retrying++
+    }
+  }
+
+  return { attempted: pending.length, succeeded, failed, retrying }
+}
+
+async function computeWebhookHmac(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(data)))
+  let hex = ''
+  for (const b of sig) hex += b.toString(16).padStart(2, '0')
+  return hex
+}
+
+/**
+ * Daily report email digest — send to all active 'daily' subscribers
+ * Uses yesterday's report_snapshots_daily row (computed by report-snapshot cron at 02:00)
+ *
+ * Idempotent-ish: skip subscribers whose last_sent_at >= today UTC
+ */
+export async function runDailyReportEmail(): Promise<{
+  sent: number
+  skipped: number
+  failed: number
+}> {
+  const { Resend } = await import('resend')
+  const apiKey = process.env.RESEND_API_KEY
+  const fromAddr = process.env.RESEND_FROM_ADDRESS ?? 'noreply@pipecommerce.com'
+  if (!apiKey) return { sent: 0, skipped: 0, failed: 0 }
+  const resend = new Resend(apiKey)
+
+  const todayStart = new Date()
+  todayStart.setUTCHours(0, 0, 0, 0)
+
+  const subs = await db
+    .select({ sub: reportEmailSubscriptions, shop: shops })
+    .from(reportEmailSubscriptions)
+    .innerJoin(shops, eq(reportEmailSubscriptions.shopId, shops.id))
+    .where(
+      and(
+        eq(reportEmailSubscriptions.type, 'daily'),
+        eq(reportEmailSubscriptions.isActive, true),
+      ),
+    )
+
+  let sent = 0
+  let skipped = 0
+  let failed = 0
+
+  for (const { sub, shop } of subs) {
+    if (sub.lastSentAt && sub.lastSentAt >= todayStart) {
+      skipped++
+      continue
+    }
+
+    // Yesterday in shop timezone
+    const yesterdayISO = await db.execute(sql`
+      SELECT ((NOW() AT TIME ZONE ${shop.timezone})::date - INTERVAL '1 day')::date AS d
+    `)
+    const yesterday = (yesterdayISO as unknown as Array<{ d: string }>)[0]?.d
+    if (!yesterday) continue
+
+    const [snap] = await db
+      .select()
+      .from(reportSnapshotsDaily)
+      .where(
+        and(
+          eq(reportSnapshotsDaily.shopId, shop.id),
+          eq(reportSnapshotsDaily.date, yesterday),
+        ),
+      )
+      .limit(1)
+
+    const html = renderDailyDigest(shop.name, yesterday, snap)
+    try {
+      await resend.emails.send({
+        from: `${shop.name} <${fromAddr}>`,
+        to: sub.recipientEmail,
+        subject: `[${shop.name}] รายงานยอดขาย ${yesterday}`,
+        html,
+        tags: [{ name: 'type', value: 'daily-digest' }],
+      })
+      await db
+        .update(reportEmailSubscriptions)
+        .set({ lastSentAt: new Date() })
+        .where(eq(reportEmailSubscriptions.id, sub.id))
+      sent++
+    } catch (err) {
+      console.error('[daily-digest] send failed:', err)
+      failed++
+    }
+  }
+
+  return { sent, skipped, failed }
+}
+
+function renderDailyDigest(
+  shopName: string,
+  date: string,
+  snap: typeof reportSnapshotsDaily.$inferSelect | undefined,
+): string {
+  const fmt = (n: string | number | null | undefined) =>
+    Number(n ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const ordersPaid = snap?.ordersPaid ?? 0
+  const gross = fmt(snap?.grossRevenue)
+  const units = snap?.unitsSold ?? 0
+  const newCust = snap?.customersNew ?? 0
+  const ret = snap?.customersReturning ?? 0
+
+  return `<!doctype html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <h2 style="margin: 0 0 8px;">${escapeHtml(shopName)}</h2>
+  <p style="color: #6b7280; margin: 0 0 24px;">รายงานยอดขายของวันที่ ${escapeHtml(date)}</p>
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr><td style="padding: 8px 0;">คำสั่งซื้อที่จ่ายแล้ว</td><td style="text-align: right; font-weight: 600;">${ordersPaid}</td></tr>
+    <tr><td style="padding: 8px 0;">ยอดขายรวม</td><td style="text-align: right; font-weight: 600;">${gross} บาท</td></tr>
+    <tr><td style="padding: 8px 0;">จำนวนสินค้าที่ขายได้</td><td style="text-align: right; font-weight: 600;">${units}</td></tr>
+    <tr><td style="padding: 8px 0;">ลูกค้าใหม่</td><td style="text-align: right; font-weight: 600;">${newCust}</td></tr>
+    <tr><td style="padding: 8px 0;">ลูกค้าเก่ากลับมาซื้อ</td><td style="text-align: right; font-weight: 600;">${ret}</td></tr>
+  </table>
+  <p style="color: #6b7280; font-size: 12px; margin-top: 32px;">PipeCommerce · เปิด admin เพื่อดูรายละเอียดเพิ่มเติม</p>
+</body></html>`
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
 
 export async function runSyncHostnames(): Promise<{

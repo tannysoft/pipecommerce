@@ -29,10 +29,12 @@ import { createServer } from 'node:http'
 import { sql } from '@pipecommerce/db'
 import { db } from '../lib/db.ts'
 import {
+  runDailyReportEmail,
   runLoyaltyExpire,
   runLoyaltyReconcile,
   runReportSnapshot,
   runSyncHostnames,
+  runWebhookDeliveries,
 } from '../lib/cron-tasks.ts'
 import { getQueue, QUEUES, type EmailSendJob, type ImageProcessJob } from '../lib/queue.ts'
 import { processEmailJob } from './workers/email-send.ts'
@@ -43,13 +45,20 @@ const CRON_QUEUES = {
   loyaltyExpire: 'cron-loyalty-expire',
   loyaltyReconcile: 'cron-loyalty-reconcile',
   syncHostnames: 'cron-sync-hostnames',
+  webhookDeliveries: 'cron-webhook-deliveries',
+  dailyReportEmail: 'cron-daily-report-email',
 } as const
 
 const SCHEDULES = [
+  // Heavy daily — 02:00/03:00/04:00 ICT (19/20/21 UTC)
   { queue: CRON_QUEUES.reportSnapshot, cron: '0 19 * * *', fn: runReportSnapshot },
   { queue: CRON_QUEUES.loyaltyExpire, cron: '0 20 * * *', fn: runLoyaltyExpire },
   { queue: CRON_QUEUES.loyaltyReconcile, cron: '0 21 * * *', fn: runLoyaltyReconcile },
+  // 08:00 ICT (01 UTC) — send daily digest email
+  { queue: CRON_QUEUES.dailyReportEmail, cron: '0 1 * * *', fn: runDailyReportEmail },
+  // High-frequency
   { queue: CRON_QUEUES.syncHostnames, cron: '*/5 * * * *', fn: runSyncHostnames },
+  { queue: CRON_QUEUES.webhookDeliveries, cron: '* * * * *', fn: runWebhookDeliveries },
 ] as const
 
 // Liveness state — flipped to false ถ้า health probe จับว่า DB ค้าง
