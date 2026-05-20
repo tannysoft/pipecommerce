@@ -9,6 +9,7 @@ export * from './shops.ts'
 export * from './shop-domains.ts'
 export * from './shop-members.ts'
 export * from './customers.ts'
+export * from './customer-addresses.ts'
 
 // Phase 2a — auth (multi-provider customer auth, see ADR-011)
 export * from './customer-identities.ts'

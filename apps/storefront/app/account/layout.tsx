@@ -18,7 +18,7 @@ export default async function AccountLayout({
 
   return (
     <main className="mx-auto max-w-4xl p-4">
-      <nav className="mb-6 flex items-center gap-1 border-b text-sm">
+      <nav className="mb-6 flex items-center gap-1 overflow-x-auto border-b text-sm">
         <Link
           href="/account"
           className="rounded-t px-4 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -30,6 +30,18 @@ export default async function AccountLayout({
           className="rounded-t px-4 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           คำสั่งซื้อ
+        </Link>
+        <Link
+          href="/account/profile"
+          className="rounded-t px-4 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          ข้อมูลของฉัน
+        </Link>
+        <Link
+          href="/account/addresses"
+          className="rounded-t px-4 py-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          ที่อยู่จัดส่ง
         </Link>
       </nav>
       {children}

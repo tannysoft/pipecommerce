@@ -169,6 +169,13 @@
       "when": 1778584811748,
       "tag": "0023_windy_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1779303094496,
+      "tag": "0024_wise_landau",
+      "breakpoints": true
     }
   ]
 }

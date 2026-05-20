@@ -3,6 +3,7 @@ import { orders, payments } from '@pipecommerce/db/schema'
 import { NextResponse, type NextRequest } from 'next/server'
 import { verifyWebhookSignature } from '@/lib/beam.ts'
 import { db } from '@/lib/db.ts'
+import { earnLoyaltyForOrder } from '@/lib/loyalty.ts'
 
 /**
  * Beam webhook receiver
@@ -63,6 +64,19 @@ export async function POST(req: NextRequest) {
           rawResponse: event.data,
         })
       })
+
+      // Loyalty earn — outside the payment transaction (idempotent, won't
+      // double-credit on webhook retry). Best-effort; don't block ack.
+      try {
+        const [paid] = await db
+          .select({ id: orders.id, shopId: orders.shopId })
+          .from(orders)
+          .where(eq(orders.id, reference))
+          .limit(1)
+        if (paid) await earnLoyaltyForOrder(paid.shopId, paid.id)
+      } catch (err) {
+        console.error('[beam-webhook] loyalty earn failed:', err)
+      }
       break
     }
     case 'payment.failed': {
